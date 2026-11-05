@@ -2,7 +2,7 @@
 
 A Warthog wallet, explorer, full node and solo miner for Windows 11.
 
-[Download the beta](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.4.0-beta.1) · [User guide](docs/MVP_GUIDE.md) · [Build from source](docs/BUILD.md) · [Report an issue](https://github.com/Wartnode/wartnode-desktop/issues)
+[Download the beta](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.4.0-beta.1) · [User guide](docs/MVP_GUIDE.md) · [Build from source](docs/BUILD.md) · [Report an issue](https://github.com/Wartnode/wartnode-desktop/issues/new/choose)
 
 Wartnode-Desktop supports two connection modes. **Lite wallet** connects to
 `mainnet.wartnode.com` without downloading the blockchain. **Full node** stores

@@ -1,0 +1,62 @@
+name: Feature request
+description: Suggest a feature or improvement for Wartnode-Desktop.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search [existing requests](https://github.com/Wartnode/wartnode-desktop/issues?q=is%3Aissue+label%3Aenhancement) before suggesting a feature.
+
+        Requests are public. Never include recovery words, private keys, passwords, wallet files or backups. Redact personal information from examples and screenshots.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Wallet and payments
+        - Node and chain import
+        - Mining
+        - Explorer
+        - Installation and updates
+        - Interface and accessibility
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the task or limitation behind the request and who it affects.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe how you would like Wartnode-Desktop to work.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or workarounds
+      description: Optional. Describe other approaches you considered or how you handle this today.
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Optional. Add examples, links or mockups that help explain the request. Remove personal information before attaching images.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for this feature.
+          required: true
+        - label: I checked that this request and its attachments contain no secrets or sensitive wallet data.
+          required: true

@@ -1,0 +1,96 @@
+name: Bug report
+description: Report a problem with Wartnode-Desktop.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search [existing issues](https://github.com/Wartnode/wartnode-desktop/issues) before reporting a problem.
+
+        Reports are public. Never include recovery words, private keys, passwords, wallet files, backups or signing keys. Redact personal paths, addresses and payment details from logs and screenshots.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the problem and include any exact error message.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Describe what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the steps that led to the problem. If it happens intermittently, say how often.
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. The error appears ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Find the version under Settings > About.
+      placeholder: 0.4.0-beta.1
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version and build
+      description: Run winver to find the Windows version and OS build.
+      placeholder: Windows 11 24H2, OS build 26100.x
+    validations:
+      required: true
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation
+      options:
+        - Installer
+        - Portable ZIP
+        - Built from source
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Connection mode
+      options:
+        - Lite wallet
+        - Full node
+        - Not configured
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Hardware and other details
+      description: For mining or display problems, include your CPU, GPU and graphics driver version. For accessibility problems, include display scaling and any assistive software used.
+    validations:
+      required: false
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Logs or screenshots
+      description: Optional. Include only relevant, redacted excerpts or cropped screenshots. Do not attach wallet files, backups or your full application data folder.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for this problem.
+          required: true
+        - label: I checked that this report and its attachments contain no secrets or sensitive wallet data.
+          required: true

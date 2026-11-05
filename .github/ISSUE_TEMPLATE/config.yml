@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: User guide
+    url: https://github.com/Wartnode/wartnode-desktop/blob/main/docs/MVP_GUIDE.md
+    about: Installation, wallet recovery, node setup and mining instructions.
+  - name: Downloads and release notes
+    url: https://github.com/Wartnode/wartnode-desktop/releases
+    about: Current downloads, verification files and known beta limitations.
