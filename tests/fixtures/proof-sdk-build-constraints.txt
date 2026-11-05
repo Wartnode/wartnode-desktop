@@ -1,0 +1,2 @@
+scikit-build-core==0.9.10
+cffi==2.1.1

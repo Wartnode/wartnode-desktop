@@ -1,4 +1,5 @@
 """Private JSON-lines signer. No listener or secrets in command-line arguments."""
+import copy
 import json
 from pathlib import Path
 import sys
@@ -10,6 +11,7 @@ from . import profile_backup, settings
 from .rpc import NodeRPC, BroadcastUncertain, NodeError
 from . import settlement
 from .fees import transaction_fee
+from . import proofs
 
 
 class Signer:
@@ -23,6 +25,7 @@ class Signer:
         self.address = None
         self.last_active = time.monotonic()
         self.review = None
+        self.proof_review = None
 
     def connection_context(self):
         if self.override_rpc is not None:return (self.override_rpc,0)
@@ -38,6 +41,7 @@ class Signer:
         self.profile_key = None
         self.address = None
         self.review = None
+        self.proof_review = None
         return {"locked": True}
 
     def call(self, action, args):
@@ -58,7 +62,12 @@ class Signer:
         if action == 'cancel_review':
             self.review=None
             return {'cancelled':True}
+        if action == 'cancel_proof_review':
+            if self.proof_review and args.get('token') == self.proof_review['token']:
+                self.proof_review = None
+            return {'cancelled': True}
         if action == 'setup':
+            self.proof_review = None
             self.profile_key = self.store.setup(args['password'], args.get('name', 'Personal'))
             self.address = None
             self.review = None
@@ -89,6 +98,7 @@ class Signer:
             if not self.store.get_wallet_by_address(address):
                 raise ValueError('This address is not in the profile')
             self.address, self.review = address, None
+            self.proof_review = None
             return {'address': address}
         if action == 'touch':
             return {'locked': False}
@@ -124,6 +134,7 @@ class Signer:
             del key
             self.address = address
             self.review = None
+            self.proof_review = None
             return {"address": address, "phrase": phrase}
         if action == "backup":
             key = self.store.unlock(args['password'])
@@ -184,6 +195,30 @@ class Signer:
                     if not page['next_before']:break
                     before,anchor=page['next_before'],page['anchor']
             return {'rows':self.store.history(owner)}
+        if action in ('review_proof', 'sign_proof'):
+            if self.profile_key is None:
+                raise ValueError('Unlock your profile first')
+            if action == 'review_proof':
+                self.proof_review = None
+                prepared = proofs.prepare(args['address'], args['kind'], args['content'])
+                if not self.store.get_wallet_by_address(prepared['address']):
+                    raise ValueError('This address is not in the profile')
+                import secrets
+                self.proof_review = dict(token=secrets.token_hex(24), prepared=prepared,
+                                         binding=binding, created=time.monotonic())
+                return dict(token=self.proof_review['token'], **copy.deepcopy(prepared))
+            reviewed, self.proof_review = self.proof_review, None
+            if (not reviewed or args.get('token') != reviewed['token']
+                    or reviewed['binding'] != binding
+                    or time.monotonic() - reviewed['created'] > 120):
+                raise ValueError('The signature review expired or changed. Review it again.')
+            owner, key = self.store.private_key(self.profile_key, reviewed['prepared']['address'])
+            try:
+                result = proofs.sign(reviewed['prepared'], key)
+            finally:
+                del key
+            self.require_context(binding)
+            return result
         if not self.address or self.profile_key is None:
             raise ValueError("Unlock your profile first")
         if action in ("balance", "review", "send"):

@@ -2,7 +2,7 @@
 
 A Warthog wallet, explorer, full node and solo miner for Windows 11.
 
-[Download the beta](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.5.0-beta.2) · [Screenshots](docs/SCREENSHOTS.md) · [User guide](docs/MVP_GUIDE.md) · [Build from source](docs/BUILD.md) · [Report an issue](https://github.com/Wartnode/wartnode-desktop/issues/new/choose)
+[Download the beta](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.5.0-beta.3) · [Screenshots](docs/SCREENSHOTS.md) · [User guide](docs/MVP_GUIDE.md) · [Build from source](docs/BUILD.md) · [Report an issue](https://github.com/Wartnode/wartnode-desktop/issues/new/choose)
 
 Wartnode-Desktop supports two connection modes. **Lite wallet** connects to
 `mainnet.wartnode.com` without downloading the blockchain. **Full node** stores
@@ -28,9 +28,9 @@ Download files from this repository's [Releases page](https://github.com/Wartnod
 
 | Download | Use |
 | --- | --- |
-| `Wartnode-Desktop-0.5.0-beta.2-windows-x64-setup.exe` | Per-user installation with a Start menu shortcut. |
-| `Wartnode-Desktop-0.5.0-beta.2-windows-x64.zip` | Portable application; extract the complete folder and run `WartNode.exe`. |
-| `Wartnode-Desktop-0.5.0-beta.2-source.zip` | Matching application source, locked upstream inputs and build recipes. |
+| `Wartnode-Desktop-0.5.0-beta.3-windows-x64-setup.exe` | Per-user installation with a Start menu shortcut. |
+| `Wartnode-Desktop-0.5.0-beta.3-windows-x64.zip` | Portable application; extract the complete folder and run `WartNode.exe`. |
+| `Wartnode-Desktop-0.5.0-beta.3-source.zip` | Matching application source, locked upstream inputs and build recipes. |
 | `SHA256SUMS` and signed manifests | Download integrity and project-signature verification. |
 
 1. Download the installer and review the [verification instructions](docs/RELEASE_SIGNING.md).
@@ -97,12 +97,15 @@ Node provides Full/Lite selection, chain/resource statistics and a separate log 
 - **Send Max:** deducts the fee and funds reserved for other payments.
 - **Activity:** uncertain payments stay reserved and are never retried automatically.
   Incoming transfers and rewards are reconciled against canonical blocks.
+- **Sign / Verify:** prove address control with a message or file, then verify
+  against an independently expected address. Works locally in Full node and Lite,
+  including verification while locked. See the [format and guide](docs/SIGNED_PROOFS.md).
 - **Back up profile:** an encrypted .wartprofile backup covers every address,
   label, contact and durable payment record. Restore into an empty profile.
 
-### Upgrading from 0.5.0-beta.1
+### Upgrading from 0.5.0-beta.1 or 0.5.0-beta.2
 
-Exit the application before running the new installer. This hotfix keeps the same
+Exit the application before running the new installer. This release keeps the same
 profile/data format; no fresh profile, wallet transfer or blockchain resync is
 required. Preserve your normal encrypted profile backup.
 

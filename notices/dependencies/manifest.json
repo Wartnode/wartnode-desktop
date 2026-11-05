@@ -19,12 +19,63 @@
       "package_source": "https://pypi.org/project/altgraph/0.17.5/"
     },
     {
+      "name": "asn1crypto",
+      "version": "1.5.1",
+      "license_files": {
+        "asn1crypto-1.5.1.dist-info/LICENSE": "29c3425e5da53ab842273e5f2f2f068ce2e35df4260f7fa156aa1ac6bed02433"
+      },
+      "package_source": "https://pypi.org/project/asn1crypto/1.5.1/"
+    },
+    {
+      "name": "bip32",
+      "version": "5.0.0",
+      "license_files": {
+        "bip32-5.0.0.dist-info/licenses/LICENCE": "ba32f1ce36d4b107164ff3b70f145eca686e6e5e74f9080f628545ebe9209dcc"
+      },
+      "package_source": "https://pypi.org/project/bip32/5.0.0/"
+    },
+    {
+      "name": "certifi",
+      "version": "2026.10.23",
+      "license_files": {
+        "certifi-2026.10.23.dist-info/licenses/LICENSE": "e93716da6b9c0d5a4a1df60fe695b370f0695603d21f6f83f053e42cfc10caf7"
+      },
+      "package_source": "https://pypi.org/project/certifi/2026.10.23/"
+    },
+    {
       "name": "cffi",
       "version": "2.1.1",
       "license_files": {
         "cffi-2.1.1.dist-info/licenses/LICENSE": "5ba24ddc57067f9249add644c3afc41a5d6dc37e23433ef759d95df370b0af63"
       },
       "package_source": "https://pypi.org/project/cffi/2.1.1/"
+    },
+    {
+      "name": "charset-normalizer",
+      "version": "3.5.2",
+      "license_files": {
+        "charset_normalizer-3.5.2.dist-info/licenses/LICENSE": "18577485d3704f1a479ded8e573c0976cfed315fd2fd17983fa988da4c2f70d1"
+      },
+      "package_source": "https://pypi.org/project/charset-normalizer/3.5.2/"
+    },
+    {
+      "name": "cmake",
+      "version": "3.31.6",
+      "license_files": {
+        "cmake-3.31.6.dist-info/licenses/AUTHORS.rst": "4ce871f5cd1c5ff8cd20c9a71fa7cbd39431b17d2b7e12c8203a532acb5c53ea",
+        "cmake-3.31.6.dist-info/licenses/LICENSE_Apache_20": "dc1f5d2d43c5531dfe0acaf4e950ea5dbe3e61e1850cf0e983bda7efc10d6693",
+        "cmake-3.31.6.dist-info/licenses/LICENSE_BSD_3": "326954839d654d6d73bafac054e8c66153321410934ef91bf50e4255269135ef"
+      },
+      "package_source": "https://pypi.org/project/cmake/3.31.6/"
+    },
+    {
+      "name": "coincurve",
+      "version": "20.0.0",
+      "license_files": {
+        "coincurve-20.0.0.dist-info/licenses/LICENSE-APACHE": "cebfb5eab4eff50df87c3c5e7eb11a634d0fa32bb4b6380800f82fae606599ae",
+        "coincurve-20.0.0.dist-info/licenses/LICENSE-MIT": "d502748a33db7ade1318e37f0b5f219f478330ed74a673e387756e53fb516715"
+      },
+      "package_source": "https://pypi.org/project/coincurve/20.0.0/"
     },
     {
       "name": "colorama",
@@ -53,12 +104,37 @@
       "package_source": "https://pypi.org/project/ecdsa/0.19.2/"
     },
     {
+      "name": "hatchling",
+      "version": "1.26.3",
+      "license_files": {
+        "hatchling-1.26.3.dist-info/licenses/LICENSE.txt": "7f143a8127ad4873862d70854b5bd2abd0085aa73e64fd2b08704a3b9f5c07fc"
+      },
+      "package_source": "https://pypi.org/project/hatchling/1.26.3/"
+    },
+    {
+      "name": "idna",
+      "version": "3.20",
+      "license_files": {
+        "idna-3.20.dist-info/licenses/LICENSE.md": "1a9a4f0e3d479a27240ddd59a9137a66ab4a0f9dfdc8ca6188cc0bfd85187f04"
+      },
+      "package_source": "https://pypi.org/project/idna/3.20/"
+    },
+    {
       "name": "mnemonic",
       "version": "0.21",
       "license_files": {
         "mnemonic-0.21.dist-info/LICENSE": "d5e3c7c62a84e80073201e2f6e5130e9e6804fa05f8ac4f8b26a13c7d3969697"
       },
       "package_source": "https://pypi.org/project/mnemonic/0.21/"
+    },
+    {
+      "name": "ninja",
+      "version": "1.11.1.4",
+      "license_files": {
+        "ninja-1.11.1.4.dist-info/licenses/AUTHORS.rst": "c58f66e8aac8a2373d582740d3c54b3d1f189da4b83bf0759536e3ef6c4a5b72",
+        "ninja-1.11.1.4.dist-info/licenses/LICENSE_Apache_20": "dc1f5d2d43c5531dfe0acaf4e950ea5dbe3e61e1850cf0e983bda7efc10d6693"
+      },
+      "package_source": "https://pypi.org/project/ninja/1.11.1.4/"
     },
     {
       "name": "packaging",
@@ -69,6 +145,14 @@
         "packaging-26.3.dist-info/licenses/LICENSE.BSD": "b70e7e9b742f1cc6f948b34c16aa39ffece94196364bc88ff0d2180f0028fac5"
       },
       "package_source": "https://pypi.org/project/packaging/26.3/"
+    },
+    {
+      "name": "pathspec",
+      "version": "1.1.1",
+      "license_files": {
+        "pathspec-1.1.1.dist-info/licenses/LICENSE": "fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85"
+      },
+      "package_source": "https://pypi.org/project/pathspec/1.1.1/"
     },
     {
       "name": "pefile",
@@ -87,6 +171,14 @@
       "package_source": "https://pypi.org/project/pillow/13.0.0/"
     },
     {
+      "name": "pluggy",
+      "version": "1.7.0",
+      "license_files": {
+        "pluggy-1.7.0.dist-info/licenses/LICENSE": "d6b65e6c213a5d0b577911d34d6e5949b9f59d76c238c5071a2f3fc16cfb2606"
+      },
+      "package_source": "https://pypi.org/project/pluggy/1.7.0/"
+    },
+    {
       "name": "pycoin",
       "version": "0.92.20241201",
       "license_files": {
@@ -101,6 +193,16 @@
         "pycparser-3.11.dist-info/licenses/LICENSE": "0a9e78156ae8b96caf1b4f11ac2df424b83de29736f9e757630548a6272fdf90"
       },
       "package_source": "https://pypi.org/project/pycparser/3.11/"
+    },
+    {
+      "name": "pycryptodome",
+      "version": "4.3.0",
+      "license_files": {
+        "pycryptodome-4.3.0.dist-info/licenses/LICENSE.rst": "2b93b8317e7d3b254e79373ab70e711eef6f7c17838d2174223bf8a011d0cfe5",
+        "pycryptodome-4.3.0.dist-info/licenses/src/mldsa-native/LICENSE": "e6419564d3f08011e7bbdb00b5203a91ed0c1f4b5b0501366282247c8bd082bb",
+        "pycryptodome-4.3.0.dist-info/licenses/src/mlkem-native/LICENSE": "ad5af590b1ddce86d4bc5272afbae1cd8bb70233aed7880ed76a808005e11d41"
+      },
+      "package_source": "https://pypi.org/project/pycryptodome/4.3.0/"
     },
     {
       "name": "pycryptodomex",
@@ -128,6 +230,14 @@
       "package_source": "https://pypi.org/project/pyinstaller-hooks-contrib/2026.8/"
     },
     {
+      "name": "pypkgconf",
+      "version": "2.1.1.1",
+      "license_files": {
+        "pypkgconf-2.1.1.1.dist-info/LICENSE.txt": "c62ff609db443f039ff083b35836ead9e0b1c2b91a7e3549d07ad8e1ad11949e"
+      },
+      "package_source": "https://pypi.org/project/pypkgconf/2.1.1.1/"
+    },
+    {
       "name": "pywin32-ctypes",
       "version": "0.2.3",
       "license_files": {
@@ -142,6 +252,23 @@
         "qrcode-8.2.dist-info/LICENSE": "40dfb903c94ee3f789500131311186548ecba5cefd3557623d7700e2522ab994"
       },
       "package_source": "https://pypi.org/project/qrcode/8.2/"
+    },
+    {
+      "name": "requests",
+      "version": "2.34.2",
+      "license_files": {
+        "requests-2.34.2.dist-info/licenses/LICENSE": "09e8a9bcec8067104652c168685ab0931e7868f9c8284b66f5ae6edae5f1130b",
+        "requests-2.34.2.dist-info/licenses/NOTICE": "f5110972dedad2b4e9d314518daf3b7d72d6e02e499acd802181de6f74571dcc"
+      },
+      "package_source": "https://pypi.org/project/requests/2.34.2/"
+    },
+    {
+      "name": "scikit-build-core",
+      "version": "0.9.10",
+      "license_files": {
+        "scikit_build_core-0.9.10.dist-info/licenses/LICENSE": "203fb4d261f202242333928424e101de19abf5bf166620124418fb6dd6b279b5"
+      },
+      "package_source": "https://pypi.org/project/scikit-build-core/0.9.10/"
     },
     {
       "name": "setuptools",
@@ -190,12 +317,37 @@
       "package_source": "https://pypi.org/project/six/1.17.0/"
     },
     {
+      "name": "trove-classifiers",
+      "version": "2026.9.21.13",
+      "license_files": {
+        "trove_classifiers-2026.9.21.13.dist-info/licenses/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+      },
+      "package_source": "https://pypi.org/project/trove-classifiers/2026.9.21.13/"
+    },
+    {
       "name": "truststore",
       "version": "0.10.5",
       "license_files": {
         "truststore-0.10.5.dist-info/licenses/LICENSE": "33be7b7e8fa4fd19b1760e1a8ed8a668bdab852c91b692dd41424bcb725a9fca"
       },
       "package_source": "https://pypi.org/project/truststore/0.10.5/"
+    },
+    {
+      "name": "urllib3",
+      "version": "2.8.0",
+      "license_files": {
+        "urllib3-2.8.0.dist-info/licenses/LICENSE.txt": "130e3a64d5fdd5d096a752694634a7d9df284469de86e5732100268041e3d686"
+      },
+      "package_source": "https://pypi.org/project/urllib3/2.8.0/"
+    },
+    {
+      "name": "warthog-py",
+      "version": "0.4.0",
+      "license_files": {
+        "warthog_py-0.4.0.dist-info/METADATA": "41b782348f33470790edd7e6cccd434070cf5fea718da4e0b44bc70639f36506",
+        "warthog_py-0.4.0.dist-info/NOTICE": "a5858eb3fd3dd851b7e6560df5be9c93d060295051bbbae54905d475dbe1aa8a"
+      },
+      "package_source": "https://codeload.github.com/warthog-network/warthog_py/tar.gz/bb1a67ab91ac69c976e2652f545adcbef9d0bde8"
     },
     {
       "name": "wheel",

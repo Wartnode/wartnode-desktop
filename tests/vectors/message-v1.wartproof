@@ -1,0 +1,12 @@
+{
+  "address": "751e76e8199196d454941c45d1b3a323f1433bd6ffded884",
+  "content": {
+    "message": "WartNode v1 interoperability test\nThis public test key must never be funded. 🐗"
+  },
+  "format": "wartnode-signed-proof",
+  "kind": "message",
+  "network": "warthog-mainnet",
+  "publicKey": "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+  "signature": "0236bdda89b04691ecd6cf4d9a69c6cc9fc4ec6ac987fada0d65957fac819e6b3f22d4560dc39524fc60125144b96b63d3deea09546dc50bbf2c8796fae3ad66",
+  "version": 1
+}

@@ -63,11 +63,11 @@ jobs:
           merge-multiple: true
           path: .
       - name: Install hash-locked Python build inputs
-        run: |
-          python -m pip install --require-hashes -r scripts/ci/build-requirements.lock
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          python -m pip install --require-hashes --no-build-isolation -r scripts/ci/requirements.lock
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        run: ./scripts/ci/install-python-inputs.ps1
+      - name: Record current dependency advisories
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/audit-dependencies.py --output evidence/ci/dependency-advisories.json
       - name: Install verified clang-cl toolchain
         run: ./scripts/ci/install-llvm.ps1
       - name: Rebuild all miner libraries and run CPU proof regressions

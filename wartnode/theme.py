@@ -10,6 +10,9 @@ QLabel#brand { color:#fdb913; font-family:'Montserrat'; font-size:22px; font-wei
 QLabel#subtitle, QLabel[muted='true'] { color:#92969e; }
 QLabel#title { font-family:'Montserrat'; font-size:27px; font-weight:600; }
 QLabel#value { font-size:28px; font-weight:600; }
+QLabel#proofVerdict { font-size:20px; font-weight:600; }
+QLabel#proofVerdict[proofState='verified'] { color:#8bd2a4; }
+QLabel#proofVerdict[proofState='invalid'] { color:#f4a49c; }
 QFrame#panel { background:#141618; border:1px solid #24272c; border-radius:10px; }
 QFrame#panel QLabel { background:transparent; }
 QPushButton { background:#191b1e; border:1px solid #32363c; border-radius:7px; padding:10px 16px; }
@@ -67,7 +70,8 @@ def apply(app,appearance='dark',force=False):
             '#24272c':'#d8dde5','#92969e':'#596474','#141618':'#ffffff','#191b1e':'#eef1f5',
             '#32363c':'#bdc5d0','#24282e':'#e2e7ee','#555a63':'#808b9a','#30343a':'#d7dee7',
             '#858a93':'#6e7885','#fdb913':'#8a5900','#191400':'#ffffff','#ffca45':'#6e4700',
-            '#222014':'#fff0c9','#605020':'#fff0c9','#303025':'#e9edf3','#454a52':'#8a95a4'}
+            '#222014':'#fff0c9','#605020':'#fff0c9','#303025':'#e9edf3','#454a52':'#8a95a4',
+            '#8bd2a4':'#176b3a','#f4a49c':'#a12222'}
         import re
         app.setStyleSheet(re.sub(r'#[0-9a-f]{6}',lambda m:replacements.get(m[0],m[0]),STYLE))
         return

@@ -7,13 +7,15 @@ version_numbers=(version_numbers+(0,0,0,0))[:4]
 version_info=VSVersionInfo(ffi=FixedFileInfo(filevers=version_numbers,prodvers=version_numbers,mask=0x3f,flags=0,OS=0x40004,fileType=1,subtype=0,date=(0,0)),kids=[StringFileInfo([StringTable('040904B0',[StringStruct('CompanyName','Wartnode contributors'),StringStruct('FileDescription','Wartnode-Desktop'),StringStruct('ProductName','Wartnode-Desktop'),StringStruct('FileVersion',version_text),StringStruct('ProductVersion',version_text)])]),VarFileInfo([VarStruct('Translation',[1033,1200])])])
 # Build one native GUI and a private console helper with shared runtime files.
 from pathlib import Path
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_all, collect_data_files
 
 root=Path(SPECPATH)
 datas=[(str(root/'assets'),'assets'),(str(root/'components'),'components'),(str(root/'notices'),'notices')]
 datas+=collect_data_files('mnemonic')
+sdk_datas,sdk_binaries,sdk_imports=collect_all('coincurve')
+datas+=sdk_datas
 a=Analysis([str(root/'run.py')],pathex=[str(root),str(root/'vendor/wart_dapp')],
-    binaries=[],datas=datas,hiddenimports=['wallet_settings','history','bundled_nodes'],
+    binaries=sdk_binaries,datas=datas,hiddenimports=['wallet_settings','history','bundled_nodes']+sdk_imports,
     hookspath=[],hooksconfig={},runtime_hooks=[],excludes=['tkinter','PySide6.QtWebEngineCore','PySide6.QtWebEngineWidgets'],noarchive=False)
 pyz=PYZ(a.pure)
 gui=EXE(pyz,a.scripts,[],exclude_binaries=True,name='WartNode',debug=False,bootloader_ignore_signals=False,

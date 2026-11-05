@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "scope": "Exact official source access for unmodified Qt/PySide/Shiboken and CPython inputs; upstream node/miner/wallet archives are included under vendor/sources.",
+  "scope": "Exact official source access for the locked runtime/build/release inputs. Upstream node/miner/wallet and Python SDK source archives are retained under vendor/sources.",
   "sources": [
     {
       "name": "Qt Base",
@@ -40,13 +40,6 @@
   ],
   "python_packages": [
     {
-      "name": "PySide6_Essentials",
-      "version": "6.12.0",
-      "metadata_url": "https://pypi.org/pypi/PySide6_Essentials/6.12.0/json",
-      "license": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
-      "sources": []
-    },
-    {
       "name": "altgraph",
       "version": "0.17.5",
       "metadata_url": "https://pypi.org/pypi/altgraph/0.17.5/json",
@@ -60,6 +53,45 @@
       ]
     },
     {
+      "name": "asn1crypto",
+      "version": "1.5.1",
+      "metadata_url": "https://pypi.org/pypi/asn1crypto/1.5.1/json",
+      "license": "MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/de/cf/d547feed25b5244fcb9392e288ff9fdc3280b10260362fc45d37a798a6ee/asn1crypto-1.5.1.tar.gz",
+          "sha256": "13ae38502be632115abf8a24cbe5f4da52e3b5231990aff31123c805306ccb9c",
+          "bytes": 121080
+        }
+      ]
+    },
+    {
+      "name": "bip32",
+      "version": "5.0.0",
+      "metadata_url": "https://pypi.org/pypi/bip32/5.0.0/json",
+      "license": "BSD-3-Clause",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/b3/ad/857ffe66a4bbe8f8f2e9c0e792e19944d7cd0909546e2ac47249857f82c3/bip32-5.0.0.tar.gz",
+          "sha256": "4caa1f74eed9f2cd4624b55f34a4094f52542552fe3d0cc52e1179b8d6e9f21e",
+          "bytes": 21668
+        }
+      ]
+    },
+    {
+      "name": "certifi",
+      "version": "2026.10.23",
+      "metadata_url": "https://pypi.org/pypi/certifi/2026.10.23/json",
+      "license": "MPL-2.0",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/fd/11/b524cbd9bbdaca58608e4cf4053fd463417549e1959fa8d3aa18319f9555/certifi-2026.10.23.tar.gz",
+          "sha256": "a9895e6e2758b371e0545e321a3a8fd1fcfd9829ada8824a936dfb16aaaf36cd",
+          "bytes": 136225
+        }
+      ]
+    },
+    {
       "name": "cffi",
       "version": "2.1.1",
       "metadata_url": "https://pypi.org/pypi/cffi/2.1.1/json",
@@ -69,6 +101,45 @@
           "url": "https://files.pythonhosted.org/packages/9e/ef/008a1939e372c06329a3fce4279c02f328488f3526744906eeec3da7ad5f/cffi-2.1.1.tar.gz",
           "sha256": "dd31f52ea1086513bb9df30f8fcee9b8918323ae067a3d5b78bc826a000712be",
           "bytes": 530807
+        }
+      ]
+    },
+    {
+      "name": "charset-normalizer",
+      "version": "3.5.2",
+      "metadata_url": "https://pypi.org/pypi/charset-normalizer/3.5.2/json",
+      "license": "MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/33/1c/f41d4e74c28ab327ff3acd36053f7ea506c55872d7a90b0fa71aa3ab0c89/charset_normalizer-3.5.2.tar.gz",
+          "sha256": "39de2a259fc954455c57274dc94c79d5842774e1247a016aff30bc0efed0f4ef",
+          "bytes": 172659
+        }
+      ]
+    },
+    {
+      "name": "cmake",
+      "version": "3.31.6",
+      "metadata_url": "https://pypi.org/pypi/cmake/3.31.6/json",
+      "license": "Apache 2.0",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/00/95/ed1ad3763da30c963a941d3c641c9ec9f1397742407a3ab00f94263a5d9d/cmake-3.31.6.tar.gz",
+          "sha256": "8edddfbf367fa1bcf4b9f3064470bc0e1022f70609c0cf69c863961897826205",
+          "bytes": 34370
+        }
+      ]
+    },
+    {
+      "name": "coincurve",
+      "version": "20.0.0",
+      "metadata_url": "https://pypi.org/pypi/coincurve/20.0.0/json",
+      "license": "",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/d9/4c/9e5e51e6c12cec6444c86697992f9c6ccffa19f84d042ff939c8b89206ff/coincurve-20.0.0.tar.gz",
+          "sha256": "872419e404300302e938849b6b92a196fabdad651060b559dc310e52f8392829",
+          "bytes": 122865
         }
       ]
     },
@@ -112,6 +183,32 @@
       ]
     },
     {
+      "name": "hatchling",
+      "version": "1.26.3",
+      "metadata_url": "https://pypi.org/pypi/hatchling/1.26.3/json",
+      "license": "MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/e1/47/7ec270a9567262ae3cb32dd420d2b53bf7aee769aca1f240eae0426b5bbc/hatchling-1.26.3.tar.gz",
+          "sha256": "b672a9c36a601a06c4e88a1abb1330639ee8e721e0535a37536e546a667efc7a",
+          "bytes": 54968
+        }
+      ]
+    },
+    {
+      "name": "idna",
+      "version": "3.20",
+      "metadata_url": "https://pypi.org/pypi/idna/3.20/json",
+      "license": "BSD-3-Clause",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/f5/08/8eea9d4b8302028f3abb2c0813953f7aec26d33b7a8960ed760e65ff29fa/idna-3.20.tar.gz",
+          "sha256": "a7db850025b95ded1eae8a46181a1a6c56c92c96f0e2b005d9ff8dc0210cab44",
+          "bytes": 216463
+        }
+      ]
+    },
+    {
       "name": "mnemonic",
       "version": "0.21",
       "metadata_url": "https://pypi.org/pypi/mnemonic/0.21/json",
@@ -125,6 +222,19 @@
       ]
     },
     {
+      "name": "ninja",
+      "version": "1.11.1.4",
+      "metadata_url": "https://pypi.org/pypi/ninja/1.11.1.4/json",
+      "license": "",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/95/d4/6b0324541018561c5e73e617bd16f20a4fc17d1179bb3b3520b6ca8beb7b/ninja-1.11.1.4.tar.gz",
+          "sha256": "6aa39f6e894e0452e5b297327db00019383ae55d5d9c57c73b04f13bf79d438a",
+          "bytes": 201256
+        }
+      ]
+    },
+    {
       "name": "packaging",
       "version": "26.3",
       "metadata_url": "https://pypi.org/pypi/packaging/26.3/json",
@@ -134,6 +244,19 @@
           "url": "https://files.pythonhosted.org/packages/7d/fa/3944b40b07da9ce895c0e6303a5ab7d53da063554f534556b134a54d6093/packaging-26.3.tar.gz",
           "sha256": "94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79",
           "bytes": 313412
+        }
+      ]
+    },
+    {
+      "name": "pathspec",
+      "version": "1.1.1",
+      "metadata_url": "https://pypi.org/pypi/pathspec/1.1.1/json",
+      "license": "",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/5a/82/42f767fc1c1143d6fd36efb827202a2d997a375e160a71eb2888a925aac1/pathspec-1.1.1.tar.gz",
+          "sha256": "17db5ecd524104a120e173814c90367a96a98d07c45b2e10c2f3919fff91bf5a",
+          "bytes": 135180
         }
       ]
     },
@@ -164,6 +287,19 @@
       ]
     },
     {
+      "name": "pluggy",
+      "version": "1.7.0",
+      "metadata_url": "https://pypi.org/pypi/pluggy/1.7.0/json",
+      "license": "MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/bf/db/7fc19e6f2dc92a966727031389fc2e08b558f0f25eb7403c1119ad4713cd/pluggy-1.7.0.tar.gz",
+          "sha256": "d1eaa46ebb595891b860ab086b4d09c8588af65ebd4361b8e8f4bb8920b90ba8",
+          "bytes": 123304
+        }
+      ]
+    },
+    {
       "name": "pycoin",
       "version": "0.92.20241201",
       "metadata_url": "https://pypi.org/pypi/pycoin/0.92.20241201/json",
@@ -186,6 +322,19 @@
           "url": "https://files.pythonhosted.org/packages/da/a8/c5fdbeee588bb8ada9458774f43adf1bdd30bd59157055142183e769a024/pycparser-3.11.tar.gz",
           "sha256": "d875f09c3507d00e1aba0eecc6dcadc1352f30fff09dc6bff2f1c2935e97c2bc",
           "bytes": 113796
+        }
+      ]
+    },
+    {
+      "name": "pycryptodome",
+      "version": "4.3.0",
+      "metadata_url": "https://pypi.org/pypi/pycryptodome/4.3.0/json",
+      "license": "BSD-2-Clause AND Unlicense AND MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/61/52/6bf92ead9cfcfc788d9f07f2f8dad4592b190d36ed3d26a5985bbf95ff5d/pycryptodome-4.3.0.tar.gz",
+          "sha256": "663fc5e1c4a3562d00c3a9b265fb94ef5f68c6085d982638b83e713af5487c06",
+          "bytes": 1807722
         }
       ]
     },
@@ -229,6 +378,26 @@
       ]
     },
     {
+      "name": "pypkgconf",
+      "version": "2.1.1.1",
+      "metadata_url": "https://pypi.org/pypi/pypkgconf/2.1.1.1/json",
+      "license": "Apache License Version 2.0, January 2004 http://www.apache.org/licenses/  TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION  1. Definitions.  \"License\" shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections 1 through 9 of this document.  \"Licensor\" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.  \"Legal Entity\" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, \"control\" means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial ownership of such entity.  \"You\" (or \"Your\") shall mean an individual or Legal Entity exercising permissions granted by this License.  \"Source\" form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files.  \"Object\" form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types.  \"Work\" shall mean the work of authorship, whether in Source or Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work (an example is provided in the Appendix below).  \"Derivative Works\" shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, the Work and Derivative Works thereof.  \"Contribution\" shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, \"submitted\" means any form of electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing by the copyright owner as \"Not a Contribution.\"  \"Contributor\" shall mean Licensor and any individual or Legal Entity on behalf of whom a Contribution has been received by Licensor and subsequently incorporated within the Work.  2. Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare Derivative Works of, publicly display, publicly perform, sublicense, and distribute the Work and such Derivative Works in Source or Object form.  3. Grant of Patent License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Work, where such license applies only to those patent claims licensable by such Contributor that are necessarily infringed by their Contribution(s) alone or by combination of their Contribution(s) with the Work to which such Contribution(s) was submitted. If You institute patent litigation against any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Work or a Contribution incorporated within the Work constitutes direct or contributory patent infringement, then any patent licenses granted to You under this License for that Work shall terminate as of the date such litigation is filed.  4. Redistribution. You may reproduce and distribute copies of the Work or Derivative Works thereof in any medium, with or without modifications, and in Source or Object form, provided that You meet the following conditions:  (a) You must give any other recipients of the Work or Derivative Works a copy of this License; and  (b) You must cause any modified files to carry prominent notices stating that You changed the files; and  (c) You must retain, in the Source form of any Derivative Works that You distribute, all copyright, patent, trademark, and attribution notices from the Source form of the Work, excluding those notices that do not pertain to any part of the Derivative Works; and  (d) If the Work includes a \"NOTICE\" text file as part of its distribution, then any Derivative Works that You distribute must include a readable copy of the attribution notices contained within such NOTICE file, excluding those notices that do not pertain to any part of the Derivative Works, in at least one of the following places: within a NOTICE text file distributed as part of the Derivative Works; within the Source form or documentation, if provided along with the Derivative Works; or, within a display generated by the Derivative Works, if and wherever such third-party notices normally appear. The contents of the NOTICE file are for informational purposes only and do not modify the License. You may add Your own attribution notices within Derivative Works that You distribute, alongside or as an addendum to the NOTICE text from the Work, provided that such additional attribution notices cannot be construed as modifying the License.  You may add Your own copyright statement to Your modifications and may provide additional or different license terms and conditions for use, reproduction, or distribution of Your modifications, or for any such Derivative Works as a whole, provided Your use, reproduction, and distribution of the Work otherwise complies with the conditions stated in this License.  5. Submission of Contributions. Unless You explicitly state otherwise, any Contribution intentionally submitted for inclusion in the Work by You to the Licensor shall be under the terms and conditions of this License, without any additional terms or conditions. Notwithstanding the above, nothing herein shall supersede or modify the terms of any separate license agreement you may have executed with Licensor regarding such Contributions.  6. Trademarks. This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Licensor, except as required for reasonable and customary use in describing the origin of the Work and reproducing the content of the NOTICE file.  7. Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, Licensor provides the Work (and each Contributor provides its Contributions) on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are solely responsible for determining the appropriateness of using or redistributing the Work and assume any risks associated with Your exercise of permissions under this License.  8. Limitation of Liability. In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise, unless required by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall any Contributor be liable to You for damages, including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this License or out of the use or inability to use the Work (including but not limited to damages for loss of goodwill, work stoppage, computer failure or malfunction, or any and all other commercial damages or losses), even if such Contributor has been advised of the possibility of such damages.  9. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer, and charge a fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of any other Contributor, and only if You agree to indemnify, defend, and hold each Contributor harmless for any liability incurred by, or claims asserted against, such Contributor by reason of your accepting any such warranty or additional liability.  END OF TERMS AND CONDITIONS  APPENDIX: How to apply the Apache License to your work.  To apply the Apache License to your work, attach the following boilerplate notice, with the fields enclosed by brackets \"[]\" replaced with your own identifying information. (Don't include the brackets!)  The text should be enclosed in the appropriate comment syntax for the file format. We also recommend that a file or class name and description of purpose be included on the same \"printed page\" as the copyright notice for easier identification within third-party archives.  Copyright [2023] [Charles Brunet]  Licensed under the Apache License, Version 2.0 (the \"License\"); you may not use this file except in compliance with the License. You may obtain a copy of the License at  http://www.apache.org/licenses/LICENSE-2.0  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/76/78/c4c2138719d49cf46d0b93a2791b924437f6b5b7139582de03ceb126284f/pypkgconf-2.1.1.1.tar.gz",
+          "sha256": "fd951a4494afa24d77320f7ddeb912a6cda890a51d7ae3e5cf576e2571db1c98",
+          "bytes": 26775
+        }
+      ]
+    },
+    {
+      "name": "PySide6_Essentials",
+      "version": "6.12.0",
+      "metadata_url": "https://pypi.org/pypi/PySide6_Essentials/6.12.0/json",
+      "license": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+      "sources": []
+    },
+    {
       "name": "pywin32-ctypes",
       "version": "0.2.3",
       "metadata_url": "https://pypi.org/pypi/pywin32-ctypes/0.2.3/json",
@@ -251,6 +420,32 @@
           "url": "https://files.pythonhosted.org/packages/8f/b2/7fc2931bfae0af02d5f53b174e9cf701adbb35f39d69c2af63d4a39f81a9/qrcode-8.2.tar.gz",
           "sha256": "35c3f2a4172b33136ab9f6b3ef1c00260dd2f66f858f24d88418a015f446506c",
           "bytes": 43317
+        }
+      ]
+    },
+    {
+      "name": "requests",
+      "version": "2.34.2",
+      "metadata_url": "https://pypi.org/pypi/requests/2.34.2/json",
+      "license": "Apache-2.0",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/ac/c3/e2a2b89f2d3e2179abd6d00ebd70bff6273f37fb3e0cc209f48b39d00cbf/requests-2.34.2.tar.gz",
+          "sha256": "f288924cae4e29463698d6d60bc6a4da69c89185ad1e0bcc4104f584e960b9ed",
+          "bytes": 142856
+        }
+      ]
+    },
+    {
+      "name": "scikit-build-core",
+      "version": "0.9.10",
+      "metadata_url": "https://pypi.org/pypi/scikit-build-core/0.9.10/json",
+      "license": "",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/04/c8/6613a04869e8c81cd91f688d3db950a056f48a2cb24d0dff32c694587128/scikit_build_core-0.9.10.tar.gz",
+          "sha256": "eee0d0f43319117ff98368a9d572ebdd0880481eabe19a4a1a77455df73ffbaf",
+          "bytes": 230104
         }
       ]
     },
@@ -301,6 +496,19 @@
       ]
     },
     {
+      "name": "trove-classifiers",
+      "version": "2026.9.21.13",
+      "metadata_url": "https://pypi.org/pypi/trove-classifiers/2026.9.21.13/json",
+      "license": "",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/bf/93/af436dfaa845cab5d96f0adbc1e4f3730532d37fa249e4eb796fb1d7fc82/trove_classifiers-2026.9.21.13.tar.gz",
+          "sha256": "0a9ebc8d4e2f3e8a22848c5258033035bec17a3012ac3fea16dbaa764489eb71",
+          "bytes": 17085
+        }
+      ]
+    },
+    {
       "name": "truststore",
       "version": "0.10.5",
       "metadata_url": "https://pypi.org/pypi/truststore/0.10.5/json",
@@ -310,6 +518,31 @@
           "url": "https://files.pythonhosted.org/packages/ee/9f/c5201d42a484c061e528825fc8e2d565f5abd50a4ced6fb7d29c4ec99b2b/truststore-0.10.5.tar.gz",
           "sha256": "30d36967ccaded5cbb38d602c433f53600036c79d502f4533a49b60a03bbefcd",
           "bytes": 28091
+        }
+      ]
+    },
+    {
+      "name": "urllib3",
+      "version": "2.8.0",
+      "metadata_url": "https://pypi.org/pypi/urllib3/2.8.0/json",
+      "license": "MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/e3/05/b17359e1cefb4f909b5e40b1b90a496d987258916dbbf88e842c729f510e/urllib3-2.8.0.tar.gz",
+          "sha256": "63bf2ead4c879426ebf22ef2a781eeb4aa3b4ae798a0435506f8687fd5bb9b63",
+          "bytes": 458972
+        }
+      ]
+    },
+    {
+      "name": "warthog-py",
+      "version": "0.4.0",
+      "license": "MIT",
+      "sources": [
+        {
+          "url": "https://codeload.github.com/warthog-network/warthog_py/tar.gz/bb1a67ab91ac69c976e2652f545adcbef9d0bde8",
+          "sha256": "b1b8071589ae85027ac87b3e756c540616e7f4f3e1135c26752a46eb377c3119",
+          "retained": "vendor/sources/warthog-py-bb1a67ab91ac69c976e2652f545adcbef9d0bde8.tar.gz"
         }
       ]
     },
@@ -339,5 +572,13 @@
         }
       ]
     }
-  ]
+  ],
+  "native_proof_backend": {
+    "name": "libsecp256k1",
+    "commit": "1ad5185cd42c0636104129fcc9f6a4bf9c67cc40",
+    "url": "https://codeload.github.com/bitcoin-core/secp256k1/tar.gz/1ad5185cd42c0636104129fcc9f6a4bf9c67cc40",
+    "sha256": "ba34be4319f505c5766aa80b99cfa696cbb2993bfecf7d7eb8696106c493cb8c",
+    "license": "MIT",
+    "usedBy": "coincurve 20.0.0"
+  }
 }

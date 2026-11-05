@@ -1,3 +1,6 @@
+# Windows/Python 3.14 needs Visual Studio x64 C++ tools and the Windows SDK.
+# Use scripts/ci/install-python-inputs.ps1 for compiler setup and hash-locked
+# build/runtime installation; see docs/PYTHON_SDK_EVALUATION.md.
 altgraph==0.17.5
 cffi==2.1.1
 colorama==0.4.6
@@ -20,3 +23,13 @@ shiboken6==6.12.0
 six==1.17.0
 zxing-cpp==3.1.1
 truststore==0.10.5
+coincurve==20.0.0
+bip32==5.0.0
+pycryptodome==4.3.0
+requests==2.34.2
+charset-normalizer==3.5.2
+idna==3.20
+urllib3==2.8.0
+certifi==2026.10.23
+asn1crypto==1.5.1
+warthog-py @ https://codeload.github.com/warthog-network/warthog_py/tar.gz/bb1a67ab91ac69c976e2652f545adcbef9d0bde8#sha256=b1b8071589ae85027ac87b3e756c540616e7f4f3e1135c26752a46eb377c3119

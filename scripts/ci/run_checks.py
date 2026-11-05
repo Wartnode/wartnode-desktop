@@ -47,6 +47,8 @@ if __name__ == '__main__':
     results['frozen-recovery'] = run('frozen-recovery', [sys.executable, 'scripts/smoke-package.py',
                                                        '--package-dir', extracted['directory']])
     results['frozen-payments'] = run('frozen-payments', [sys.executable, 'scripts/test-frozen-payments.py'])
+    results['frozen-proofs'] = run('frozen-proofs', [sys.executable, 'scripts/test-frozen-proofs.py',
+                                                  '--package-dir', extracted['directory']])
     results['installer'] = run('installer', [powershell, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
                                            'scripts/build-installer.ps1', '-PythonExecutable', sys.executable])
     results['upgrade-fixture'] = run('upgrade-fixture', [sys.executable, 'scripts/build-upgrade-fixture.py'])

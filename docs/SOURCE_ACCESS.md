@@ -12,6 +12,11 @@ test code, build recipes, lock files, patches and notices. `vendor/sources`
 contains exact source archives for official Warthog core, the BRminer-derived
 engine, wallet primitives and ConnectCoin/Janus hashing dependencies. Their
 versions, hashes and materialization paths are in `scripts/ci/sources.lock.json`.
+The Warthog Python SDK archive and metadata are also retained under
+`vendor/sources`; see `vendor/sources/warthog-python-sdk.json`. Its coincurve
+20.0.0 source and exact native secp256k1 commit/archive hashes are recorded there.
+The new dependencies retain their notices in `notices/dependencies`, with the
+upstream secp256k1 license in `notices/libsecp256k1-MIT.txt`.
 No private repository access is needed to obtain these inputs.
 
 Collected test results, VM images, wallet databases, logs, screenshots and private

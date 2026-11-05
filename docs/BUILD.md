@@ -37,8 +37,7 @@ git clone https://github.com/Wartnode/wartnode-desktop.git
 cd wartnode-desktop
 ./scripts/ci/bootstrap-python.ps1
 python scripts/ci/bootstrap.py
-python -m pip install --require-hashes -r scripts/ci/build-requirements.lock
-python -m pip install --require-hashes --no-build-isolation -r scripts/ci/requirements.lock
+./scripts/ci/install-python-inputs.ps1
 ```
 
 The Python bootstrap installs the verified interpreter in the workspace and
@@ -73,3 +72,16 @@ python scripts/run-tests.py --legacy
 Application versions and Windows release versions are independent. Keep the
 matching source ZIP, lock files and notices beside distributed binaries. The
 build records exact input hashes; it does not claim bit-for-bit reproducibility.
+
+## Message proof SDK inputs
+
+The Python SDK source archive and its commit/hash metadata are retained in
+`vendor/sources/warthog-python-sdk.json`. Runtime and native build inputs are
+hash locked; `install-python-inputs.ps1` initializes x64 MSVC and uses pinned
+Ninja before the coincurve build. Do not replace this with an unpinned SDK install.
+The proof adapter uses the SDK Account API locally, without network API calls.
+
+CI inventories every runtime/build/release package and SDK repository advisory.
+These results require applicability review and do not certify the pinned source
+as vulnerability-free. Frozen helper checks cover message/file proofs, locked
+verification, single-use approvals, tampering and v1 compatibility.

@@ -1,70 +1,62 @@
-# 0.5.0-beta.2
+# 0.5.0-beta.3: message and file signing
 
-This hotfix includes the Dashboard layout introduced in 0.5.0-beta.1 across Overview, Node, Wallet, Mine,
-Explorer and Settings. Wallets use a fresh shared-password profile with labeled
-addresses, an address book and complete encrypted profile backups. Overview shows
-one current connection status, combined funds, mining performance and network
-statistics. Difficulty uses GH/TH.
+**Wallet → My addresses → Sign / Verify** can now prove control of a Warthog
+address by signing a message or file fingerprint. It works locally in Full node
+and Lite modes. File contents are read locally and are never uploaded.
 
-## Mining recovery hotfix
+- Select an owned address and review the exact message or filename, byte length
+  and SHA-256 before approving. Signing requires an unlocked profile.
+- Copy the public proof or save a `.wartproof` document. For files, share the
+  original file separately.
+- Verify pasted or saved proofs against an independently obtained expected
+  address. Verification works with the profile locked and no running node.
+- Editing inputs clears previous results. Cancelling or locking during review
+  prevents that approval from being used. Reviews expire after two minutes.
 
-Brief sync transitions and head/template races no longer permanently stop solo
-mining. Readiness snapshots are retried, running miners have a five-second grace
-period, and a longer temporary interruption shows **Waiting for node**. Two
-healthy checks allow automatic resume with the reviewed payout and limits. Stop
-mining, Stop node, mode changes, resync and Exit cancel recovery. Miner crashes,
-invalid responses and failed restarts require manual action. Intent is not saved
-across app restarts. See [behavior and diagnostics](MINING_RECOVERY.md).
+New proofs use the pinned Warthog Python SDK and native libsecp256k1 through
+coincurve. The v2 format carries a 65-byte recoverable signature. Earlier v1
+prototype proofs remain readable; new signing always produces v2. The complete
+[format, examples and verifier instructions](SIGNED_PROOFS.md) are public.
+This is a WartNode application format, not a Warthog consensus or cross-wallet
+standard. It creates no transaction, fee or on-chain address-name record.
 
-Upgrade from 0.5.0-beta.1 using the installer after exiting the app. The profile
-and data format are unchanged; a fresh profile or chain resync is not required.
-Recovery has automated outage, reorg, cancellation and native UI coverage; no new
-physical GPU soak or Windows 11 VM certification is claimed for this hotfix.
+Messages are limited to 16,384 UTF-8 bytes; files to 16 GiB. A valid signature
+proves access to the private key for that signed content, without establishing
+legal identity, current or exclusive custody, trusted time, or file safety.
+Wallet-claim services must issue and consume their own fresh challenges.
 
-## Dashboard features
+## Upgrade and recovery
 
-- Full/Lite selection and detailed node statistics are on Node; logs open separately.
-- Mining centers on hashrate charts, supported CPU/GPU readings, session counters
-  and canonical rewards for the selected payout address across sessions. Settings
-  and the console open in separate windows. Missing sensors and partial history
-  are labeled.
-- Presets are Eco 30%, Balanced 60% and Heavy 90%; Custom supports independent
-  CPU/GPU ceilings from 5% to 95%. Existing saved limits retain their effective
-  values as Custom.
-- Explorer rolls the latest 25 blocks, supports Pause/Resume, and opens wartnode.com
-  from its website button or a double-clicked height.
-- General, Security, Storage, Updates and About provide working preferences,
-  including installed-only startup, tray behavior, appearance, start page,
-  balance privacy and configurable automatic lock.
-- The wallet fee and managed node minimum are 0.00009992 WART.
-- All Windows 11 x64 releases are targeted, starting at build 22000. Per-release
-  OS certification is not claimed or required; see [compatibility](WINDOWS_COMPATIBILITY.md).
+Exit Wartnode-Desktop before installing. Upgrades from 0.5.0-beta.1 or beta.2
+retain data contract 4 and profile format 1: no fresh profile, wallet transfer,
+chain migration or resync is required. Preserve your encrypted profile backup.
+The earlier 0.4.0-beta.1 manual fresh-profile transfer remains necessary.
 
-## Upgrade from 0.4.0-beta.1
+Existing Dashboard, mining recovery, payment reservation and backup behavior
+remain included. Automatic update discovery stays disabled; use the installer
+from this repository's Releases page.
 
-The new data contract requires a **fresh profile**. Preserve your original backup
-and export recovery phrases/private keys using the old application before
-upgrading. The new app leaves old-format wallet databases untouched and asks you
-to choose a fresh folder. Import addresses manually, verify them, and make a new
-.wartprofile backup. Automatic migration and legacy backup import are not provided.
-Binary rollback to an incompatible data format remains blocked. See the
-[user guide](MVP_GUIDE.md) for backup and recovery details.
+## Verification and beta scope
 
-## Qualification and beta scope
+Download the matching source archive, both project-signed manifests and
+`SHA256SUMS` with the installer or portable ZIP. Follow
+[release verification](RELEASE_SIGNING.md). Project signatures do not establish
+Windows Authenticode publisher trust; the installer remains Authenticode unsigned.
 
-The Dashboard development baseline passed the application/wallet/native suites,
-Windows 11 host installation and recovery, a two-address frozen-profile backup/
-restore/password-change flow in a Windows 11 guest, actual node fee/shutdown checks,
-and physical 30/60/90 and independent Custom mining limits on Ryzen 7 5800X / RTX
-4060. The exact public beta source and artifacts are bound to its public GitHub
-Actions run and signed manifests; development-baseline results retain their
-original scope and are not relabeled as fresh OS certification of every build.
+The signing integration received a focused source review and 22 manual packaged
+UI checks covering Full node/Lite, message/file signing, cancellation, locked
+verification and invalid inputs. That review is not a full native cryptographic
+or side-channel audit. Physical Windows session lock and maximum-size file reads
+were not manually exercised; automated tests cover lock-during-review and
+cancelled hashing.
 
-As for the previous public beta, wider CPU/GPU/driver testing, remaining physical
-display/accessibility coverage and the 72-hour integrated soak are deferred. They
-are not marked passed and remain requirements for broader stable-release claims.
+Broader hardware/driver, Windows/accessibility and integrated soak qualification
+remain existing beta deferrals. Public CI and signed manifests identify this
+release's exact source and files; historical qualification is not relabeled as
+fresh physical hardware or clean Windows certification.
 
-## Known limits
+## Existing beta limits
+
 
 - Windows 10, Windows Server, ARM and 32-bit Windows are outside the target.
   Earlier Windows 11 feature releases have not all been executed individually.
@@ -86,7 +78,9 @@ are not marked passed and remain requirements for broader stable-release claims.
   Imported chain files require a trusted source; structural checks do not replay
   every historical block.
 
+
 ## Reporting a problem
+
 
 Include the app version, Windows build, connection mode, reproduction steps and
 redacted diagnostics. For mining, include CPU/GPU/driver versions. Keep passwords,
@@ -94,4 +88,5 @@ recovery words, private keys, addresses and wallet files out of public reports.
 Collected qualification data, VM files and private development history are not
 included in the public repository or matching source archive.
 
-[Previous beta notes](https://github.com/Wartnode/wartnode-desktop/blob/v0.4.0-beta.1/docs/BETA.md)
+
+[Previous beta notes](https://github.com/Wartnode/wartnode-desktop/blob/v0.5.0-beta.2/docs/BETA.md)

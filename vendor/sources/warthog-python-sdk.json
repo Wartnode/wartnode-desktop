@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "name": "warthog-py",
+  "version": "0.4.0",
+  "repository": "https://github.com/warthog-network/warthog_py",
+  "commit": "bb1a67ab91ac69c976e2652f545adcbef9d0bde8",
+  "archive": "vendor/sources/warthog-py-bb1a67ab91ac69c976e2652f545adcbef9d0bde8.tar.gz",
+  "sha256": "b1b8071589ae85027ac87b3e756c540616e7f4f3e1135c26752a46eb377c3119",
+  "licenseDeclaredByUpstream": "MIT",
+  "localSourceChanges": false,
+  "purpose": "Offline message/file proof signing and public-key recovery; no SDK network API is used.",
+  "nativeBackend": {
+    "package": "coincurve",
+    "version": "20.0.0",
+    "sourceSha256": "872419e404300302e938849b6b92a196fabdad651060b559dc310e52f8392829",
+    "vendoredLibrary": "bitcoin-core/secp256k1",
+    "commit": "1ad5185cd42c0636104129fcc9f6a4bf9c67cc40",
+    "archiveSha256": "ba34be4319f505c5766aa80b99cfa696cbb2993bfecf7d7eb8696106c493cb8c",
+    "notice": "notices/libsecp256k1-MIT.txt"
+  }
+}

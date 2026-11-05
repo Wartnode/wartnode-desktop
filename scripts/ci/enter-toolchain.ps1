@@ -1,14 +1,7 @@
 param([string]$PythonExecutable = 'python', [int]$Jobs = 4)
 $ErrorActionPreference = 'Stop'
-$vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-$installation = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-if (-not $installation) { throw 'Visual Studio x64 C++ Build Tools are required' }
-$developer = Join-Path $installation 'VC\Auxiliary\Build\vcvars64.bat'
-$lines = & cmd.exe /d /c "`"$developer`" >nul && set"
-if ($LASTEXITCODE) { throw 'Could not initialize the x64 toolchain' }
-foreach ($line in $lines) {
-    if ($line -match '^(PATH|INCLUDE|LIB|LIBPATH|VSINSTALLDIR|VisualStudioVersion|VCToolsVersion|VCToolsInstallDir|WindowsSDKVersion|WindowsSdkDir)=(.*)$') { Set-Item -Path "Env:$($Matches[1])" -Value $Matches[2] }
-}
+. (Join-Path $PSScriptRoot 'msvc-environment.ps1')
+$installation = Initialize-WartnodeMsvc
 $cmake = Join-Path $installation 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin'
 $ninja = Join-Path $installation 'Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja'
 $llvm = Join-Path $env:ProgramFiles 'LLVM\bin'

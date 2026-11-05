@@ -1,0 +1,15 @@
+{
+  "address": "751e76e8199196d454941c45d1b3a323f1433bd6ffded884",
+  "content": {
+    "name": "empty.bin",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "size": 0
+  },
+  "format": "wartnode-signed-proof",
+  "kind": "file",
+  "network": "warthog-mainnet",
+  "publicKey": "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+  "signature": "e8f26cb18d4d2fe3cd2cde1b814dc3616833b5140e8b43ada3127ee813cab947377d940947589b1a089ce98ac17ff6b536879cc856ec2263aa86d6199774981d00",
+  "version": 2
+}
+

@@ -27,6 +27,7 @@ from .mining_ui import MiningActions
 from .explorer_ui import ExplorerActions
 from .preferences_ui import PreferencesActions
 from .activity_ui import ActivityActions
+from .proof_ui import ProofActions
 from .desktop_preferences import startup_enabled
 
 
@@ -110,7 +111,7 @@ class Task(QRunnable):
 from .widgets import label, button, table, populate, format_wart, LogView
 
 
-class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,ActivityActions,QMainWindow):
+class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,ActivityActions,ProofActions,QMainWindow):
     def __init__(self, directory, autostart=False, installed_root=None):
         super().__init__()
         self.directory = Path(directory)
@@ -783,6 +784,7 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
                 self.display_receiving(self.public_address if any(r['address']==self.public_address for r in self.wallets)
                     else self.wallets[0]['address'] if self.wallets else None)
             self.refresh_address_tables()
+            if hasattr(self, 'proof_dialog'):self.proof_dialog.refresh_addresses()
             if not self.wallets:self.profile_balance=ProfileBalance.from_rows([],[],'')
             self.update_profile_balance_display()
             self.refresh_activity(network=False)
@@ -1002,6 +1004,7 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
     def lock_wallet(self):
         self.profile_unlocked = False
         self.session_generation += 1
+        if hasattr(self, 'proof_dialog'):self.proof_dialog.lock_signing()
         # Qt modal dialogs run a nested event loop: idle and Windows lock
         # events still arrive while a recovery phrase or password is open.
         for dialog,clear in list(self.secret_dialogs.items()):
