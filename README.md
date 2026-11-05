@@ -2,7 +2,7 @@
 
 A Warthog wallet, explorer, full node and solo miner for Windows 11.
 
-[Download the beta](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.4.0-beta.1) Â· [User guide](docs/MVP_GUIDE.md) Â· [Build from source](docs/BUILD.md) Â· [Report an issue](https://github.com/Wartnode/wartnode-desktop/issues)
+[Download the beta](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.4.0-beta.1) · [User guide](docs/MVP_GUIDE.md) · [Build from source](docs/BUILD.md) · [Report an issue](https://github.com/Wartnode/wartnode-desktop/issues)
 
 Wartnode-Desktop supports two connection modes. **Lite wallet** connects to
 `mainnet.wartnode.com` without downloading the blockchain. **Full node** stores
@@ -57,7 +57,7 @@ For the portable version, keep `_internal` and `WartNodeHelper.exe` beside
 
 ### Lite wallet
 
-Open **Settings â†’ Storage â†’ Connection**, select **Lite wallet**, then choose
+Open **Settings → Storage → Connection**, select **Lite wallet**, then choose
 **Apply connection**. The application uses the hosted node at
 `mainnet.wartnode.com` and the Wartnode explorer service. These services can see
 queried public addresses and provide chain data; Lite mode does not independently
@@ -65,7 +65,7 @@ validate the blockchain. A service failure does not switch to another backend.
 
 ### Initialize a full node
 
-1. Open **Node â†’ Initialize nodeâ€¦**.
+1. Open **Node → Initialize node…**.
 2. Choose an empty local directory for the blockchain.
 3. Choose **Sync from genesis** or **Import chain database**.
 4. After initialization, select **Start node**.
@@ -103,9 +103,9 @@ mode, pool option or developer-fee redirection.
 | Mode | CPU limit | GPU activity limit |
 | --- | --- | --- |
 | Light | 20% | 20% |
-| Normal â€” default | 50% | 50% |
+| Normal — default | 50% | 50% |
 | Heavy | 80% | 80% |
-| Custom | 5â€“95% | 5â€“95% |
+| Custom | 5–95% | 5–95% |
 
 CPU limits apply to the miner process. GPU limits pace mining work; observed
 utilization depends on the hardware and workload. Stop mining before changing
@@ -148,7 +148,7 @@ wallets, logs and private development history are excluded.
 
 Use [Issues](https://github.com/Wartnode/wartnode-desktop/issues) for reproducible
 bugs and feature requests. Include the application version, Windows build,
-reproduction steps and redacted diagnostics from **Settings â†’ About**.
+reproduction steps and redacted diagnostics from **Settings → About**.
 
 ## License and components
 

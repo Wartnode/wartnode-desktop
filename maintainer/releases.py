@@ -108,7 +108,7 @@ def sign(directory,keys,ci):
     for name,value in request['ci'].items():
         if ci.get(name)!=value:raise ValueError('Release request and GitHub build do not agree')
     if package['publisher']!=public_record(keys) or package['trust']['public_key']!=public_record(keys)['keys']['update']['public_key']:
-        raise ValueError('Local signing keys do not match the final packageâ€™s pinned keys')
+        raise ValueError('Local signing keys do not match the final package’s pinned keys')
     if ci['head_sha']!=delivery['commit']:raise ValueError('Signing source identity mismatch')
     release.verify_ci(ci,delivery['commit'])
     now=int(time.time());version=delivery['application'];asset=artifacts['portable']
