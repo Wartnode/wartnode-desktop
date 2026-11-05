@@ -1,4 +1,4 @@
-"""Real Windows sharing locks and concurrent validation-receipt publication."""
+"""Windows sharing locks and concurrent application settings/journal writes."""
 import ctypes
 from ctypes import wintypes
 import json
@@ -8,11 +8,11 @@ import tempfile
 import threading
 import time
 import unittest
-from scripts.step1_io import atomic_json
+from wartnode.paths import atomic_json
 
-class ReceiptPublicationTests(unittest.TestCase):
+class AtomicStorageTests(unittest.TestCase):
     @unittest.skipUnless(os.name=='nt','Windows sharing behavior')
-    def test_receipt_commit_survives_a_real_reader_without_delete_sharing(self):
+    def test_settings_commit_survives_a_real_reader_without_delete_sharing(self):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'progress.json';atomic_json(path,{'stage':'before'})
             kernel=ctypes.WinDLL('kernel32',use_last_error=True)
@@ -37,7 +37,7 @@ class ReceiptPublicationTests(unittest.TestCase):
             self.assertEqual(json.loads(path.read_text())['stage'],'committed')
             self.assertEqual([entry.name for entry in Path(directory).iterdir()],['progress.json'])
 
-    def test_competing_writers_leave_one_complete_receipt_without_temp_files(self):
+    def test_competing_writers_leave_one_complete_document_without_temp_files(self):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'progress.json';barrier=threading.Barrier(3);errors=[]
             def publish(tag):
