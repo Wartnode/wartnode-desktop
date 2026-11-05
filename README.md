@@ -2,7 +2,7 @@
 
 A Warthog wallet, explorer, full node and solo miner for Windows 11.
 
-[Download the beta](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.5.0-beta.1) · [User guide](docs/MVP_GUIDE.md) · [Build from source](docs/BUILD.md) · [Report an issue](https://github.com/Wartnode/wartnode-desktop/issues/new/choose)
+[Download the beta](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.5.0-beta.2) · [User guide](docs/MVP_GUIDE.md) · [Build from source](docs/BUILD.md) · [Report an issue](https://github.com/Wartnode/wartnode-desktop/issues/new/choose)
 
 Wartnode-Desktop supports two connection modes. **Lite wallet** connects to
 `mainnet.wartnode.com` without downloading the blockchain. **Full node** stores
@@ -28,9 +28,9 @@ Download files from this repository's [Releases page](https://github.com/Wartnod
 
 | Download | Use |
 | --- | --- |
-| `Wartnode-Desktop-0.5.0-beta.1-windows-x64-setup.exe` | Per-user installation with a Start menu shortcut. |
-| `Wartnode-Desktop-0.5.0-beta.1-windows-x64.zip` | Portable application; extract the complete folder and run `WartNode.exe`. |
-| `Wartnode-Desktop-0.5.0-beta.1-source.zip` | Matching application source, locked upstream inputs and build recipes. |
+| `Wartnode-Desktop-0.5.0-beta.2-windows-x64-setup.exe` | Per-user installation with a Start menu shortcut. |
+| `Wartnode-Desktop-0.5.0-beta.2-windows-x64.zip` | Portable application; extract the complete folder and run `WartNode.exe`. |
+| `Wartnode-Desktop-0.5.0-beta.2-source.zip` | Matching application source, locked upstream inputs and build recipes. |
 | `SHA256SUMS` and signed manifests | Download integrity and project-signature verification. |
 
 1. Download the installer and review the [verification instructions](docs/RELEASE_SIGNING.md).
@@ -100,6 +100,12 @@ Node provides Full/Lite selection, chain/resource statistics and a separate log 
 - **Back up profile:** an encrypted .wartprofile backup covers every address,
   label, contact and durable payment record. Restore into an empty profile.
 
+### Upgrading from 0.5.0-beta.1
+
+Exit the application before running the new installer. This hotfix keeps the same
+profile/data format; no fresh profile, wallet transfer or blockchain resync is
+required. Preserve your normal encrypted profile backup.
+
 ### Upgrading from 0.4.0-beta.1
 
 This beta introduces a fresh shared-password profile. **There is no automatic wallet
@@ -138,6 +144,12 @@ Mine emphasizes hashrate charts, session statistics, supported CPU/GPU telemetry
 chain-confirmed rewards for the selected payout address across sessions. Missing
 sensors show unavailable; partial reward coverage is labeled. Accepted miner work
 is separate from confirmed blocks. The mining console opens in its own window.
+
+Brief node sync transitions no longer permanently stop mining. Running miners
+have a five-second grace period; longer temporary interruptions show **Waiting
+for node** and resume after two healthy checks using the reviewed payout and
+limits. Explicit Stop actions cancel recovery. Mining does not resume after
+reopening the application. See [mining recovery](docs/MINING_RECOVERY.md).
 
 ## Explorer
 

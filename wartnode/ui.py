@@ -409,6 +409,7 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
             QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.Cancel,QMessageBox.StandardButton.Cancel)!=QMessageBox.StandardButton.Yes:
             self.connection_choice.setCurrentIndex(0);return
         self.mode_busy=True;self.lock_wallet();self.explorer_generation+=1;self.explorer_page=None
+        self.runtime.cancel_mining()
         self.apply_connection_button.setEnabled(False)
         def switch():
             self.signer.call('lock')  # Wait for any in-flight private-helper operation before changing policy.
@@ -544,17 +545,16 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
                     self.refresh_history()
                 if self.runtime.ready and self.address and self.send_dialog.isVisible():
                     self.submit(lambda: self.signer.call('balance'), self.balance_loaded, quiet=True)
-            if self.runtime.miner.running and not self.runtime.ready:
-                self.submit(self.runtime.miner.stop, quiet=True)
+            self.render_mining_status()
+            self.render_miner_telemetry()
             if self.runtime.rpc_available and state and state.get("height", 0) > 0:
                 self.update_index()
-        self.submit(self.runtime.probe, polled, quiet=True)
+        self.submit(self.runtime.poll, polled, quiet=True)
         self.refresh_process_statistics()
         self.node_log.update_lines(self.runtime.node.lines)
         self.miner_log.update_lines(self.runtime.miner.lines)
         running = self.runtime.miner.running
-        self.mining_status.setText("Mining to local node" if running else "Unavailable in Lite mode" if self.preferences["connection_mode"]=="lite" else "Stopped")
-        self.summaries["Solo mining"].setText("Unavailable" if self.preferences["connection_mode"]=="lite" else "Running" if running else "Stopped")
+        self.render_mining_status()
         for widget in (self.payout, self.mining_mode, self.cpu_limit, self.gpu_limit, self.backend, self.device):
             widget.setEnabled(not self.mining_busy and (not running or self.editing_mining))
         metrics = self.runtime.miner.metrics
@@ -595,7 +595,7 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
         self.overview_status.setText(f"Block height: {state.get('height',0):,}. " + ("Ready to send payments." if self.runtime.ready and not local else ("Ready to send payments and mine." if self.runtime.ready else "Connect to a ready node to send payments.")))
         self.review_button.setEnabled(self.runtime.ready and bool(self.address))
         self.max_button.setEnabled(self.runtime.ready and bool(self.address))
-        self.start_mining.setEnabled(local and self.runtime.ready and not self.runtime.miner.running and not self.mining_busy and not self.editing_mining and self.has_mining_gpu())
+        self.start_mining.setEnabled(local and self.runtime.ready and not self.runtime.miner.running and not self.runtime.mining_requested and not self.mining_busy and not self.editing_mining and self.has_mining_gpu())
         if self.address and not self.runtime.ready:
             self.wallet_status.setText('Wallet unlocked. Balance unavailable until the node is ready.')
         self.update_profile_balance_display()
@@ -661,6 +661,10 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
     def start_node(self):
         self.notice.setText("Starting node…")
         self.submit(self.runtime.start_node, lambda result, error: self.tick(),lifecycle=True)
+
+    def stop_node(self):
+        self.runtime.cancel_mining()
+        self.submit(self.runtime.stop_node,lambda *_:self.tick(),lifecycle=True)
 
     def update_index(self):
         if self.indexing:
@@ -1075,17 +1079,18 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
         self.submit(lambda: self.guard_signer(generation,'review',recipient=recipient,amount=amount,max=bool(maximum)),reviewed)
 
     def start_miner(self):
-        if self.mining_busy or self.runtime.miner.running or self.editing_mining:return
+        if self.mining_busy or self.mode_busy or self.init_busy or self.closing or self.exiting or self.runtime.miner.running or self.runtime.mining_requested or self.editing_mining:return
         payout, backend, device = self.payout.text().strip(),self.backend.currentData(),self.device.currentData() or 0
         cpu,gpu=self.cpu_limit.value(),self.gpu_limit.value()
         threads=worker_threads(cpu)
         answer = QMessageBox.question(self,'Start mining',f"Start solo mining to this address?\n\n{payout}\n\nCPU limit: {cpu}%\nGPU limit: {gpu}%\nHardware: {self.backend.currentText()}\nGPU: {self.device.currentText()}\nNode: Local",QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.Cancel,QMessageBox.StandardButton.Cancel)
         if answer == QMessageBox.StandardButton.Yes:
+            generation=self.runtime.mining_generation
             self.mining_busy=True;self.start_mining.setEnabled(False)
             for control in (self.payout,self.mining_mode,self.cpu_limit,self.gpu_limit,self.backend,self.device):
                 control.setEnabled(False)
             def start():
-                self.runtime.start_miner(payout,threads,backend,device,cpu_limit=cpu,gpu_limit=gpu)
+                self.runtime.start_miner(payout,threads,backend,device,cpu_limit=cpu,gpu_limit=gpu,generation=generation)
                 settings.save(self.directory,payout_address=payout,cpu_threads=threads,gpu_device=device)
             def started(*_):
                 self.mining_busy=False;self.tick()
@@ -1106,7 +1111,7 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
             self.device.addItem('No supported GPU found',0)
         elif self.preferences['gpu_device']<len(names):
             self.device.setCurrentIndex(self.preferences['gpu_device'])
-        self.start_mining.setEnabled(self.runtime.ready and not self.runtime.miner.running and bool(names))
+        self.start_mining.setEnabled(self.runtime.ready and not self.runtime.miner.running and not self.runtime.mining_requested and not self.mining_busy and not self.editing_mining and bool(names))
 
     def has_mining_gpu(self):
         backend = self.backend.currentData()
@@ -1122,6 +1127,7 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
 
     def resync(self):
         if QMessageBox.question(self,'Resync blockchain','Stop mining and the node, and back up the current blockchain data? Start the node afterward to download the blockchain again. Your wallets and payment history will be kept.',QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.Cancel,QMessageBox.StandardButton.Cancel) == QMessageBox.StandardButton.Yes:
+            self.runtime.cancel_mining()
             self.submit(self.runtime.archive_chain,lambda result,error: self.notice.setText('Blockchain backup saved to '+result+'. Start the node to sync again.') if result else None)
 
     def export_diagnostics(self):
@@ -1152,6 +1158,7 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
             self.lock_wallet()
             if self.preferences['close_to_tray'] and QSystemTrayIcon.isSystemTrayAvailable():
                 self.hide()
+                if self.mining_settings_dialog.isVisible():self.mining_settings_dialog.reject()
                 for dialog in (self.send_dialog,self.receive_dialog,self.node_log_dialog,self.mining_log_dialog,self.mining_settings_dialog):dialog.hide()
                 self.tray.showMessage('Wartnode-Desktop is still running','Your profile is locked. Use Exit Wartnode-Desktop to close the app.')
             else:self.exit_application()
@@ -1165,6 +1172,7 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
         if self.exiting or self.closing:
             return
         self.closing = True
+        self.runtime.cancel_mining()
         self.timer.stop()
         self.lock_wallet()
         self.notice.setText('Closing Wartnode-Desktop…')

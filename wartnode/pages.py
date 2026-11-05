@@ -63,7 +63,7 @@ def build_node(self):
     self.node_details = label("", muted=True)
     page.addWidget(self.node_details)
     self.start_node_button = button("Start node", self.start_node, True)
-    self.stop_node_button = button("Stop node", lambda: self.submit(self.runtime.stop_node, lambda *_: self.tick(),lifecycle=True))
+    self.stop_node_button = button("Stop node", self.stop_node)
     self.initialize_node_button=button("Initialize node…",self.first_use)
     self.node_log_dialog = LogDialog('Node log',self)
     self.node_log = self.node_log_dialog.view
@@ -170,7 +170,8 @@ def build_mine(self):
     self.mining_status=label('Stopped',muted=True);actions.addWidget(self.mining_status,1)
     self.start_mining=button('Start mining',self.start_miner,True)
     actions.addWidget(self.start_mining)
-    actions.addWidget(button('Stop mining',lambda:self.submit(self.runtime.miner.stop,lambda *_:self.tick(),lifecycle=True)))
+    self.stop_mining=button('Stop mining',self.stop_miner)
+    actions.addWidget(self.stop_mining)
     self.mining_log_dialog=LogDialog('Mining console',self);self.miner_log=self.mining_log_dialog.view
     actions.addWidget(button('Mining console',self.mining_log_dialog.show));page.addLayout(actions)
     modes=QHBoxLayout()

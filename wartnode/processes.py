@@ -1,6 +1,7 @@
 """Owned process lifecycle, private signer transport and Windows graceful stop."""
 import collections
 import ctypes
+from datetime import datetime, timezone
 from functools import wraps
 import json
 import os
@@ -146,8 +147,14 @@ class OwnedProcess:
             return {"graceful": False, "forced": True}
 
 
+class MiningNotReady(ValueError):
+    """Fresh readiness validation failed; a waiting session may retry later."""
+
+
 class Runtime:
     RPC_PORT, STRATUM_PORT, P2P_PORT = 19400, 19456, 19187
+    MINING_SYNC_GRACE = 5.0
+    MINING_READY_CHECKS = 2
 
     def __init__(self, directory):
         self.directory = Path(directory)
@@ -161,6 +168,16 @@ class Runtime:
         self.closed = False
         self.stop_reason = ''
         self.recovery_error=''
+        # Intent lives only for this application session. UI cancellation does
+        # not wait for an in-flight RPC or process operation to finish.
+        self._mining_lock = threading.RLock()
+        self._mining_generation = 0
+        self._mining_request = None
+        self._mining_waiting = False
+        self._mining_unready_since = None
+        self._mining_ready_checks = 0
+        self._mining_editing = False
+        self.mining_error = ''
         from .chain_import import resume
         try:resume(self.directory)
         except (ValueError,OSError) as error:self.recovery_error=str(error)
@@ -201,8 +218,15 @@ class Runtime:
 
     @serialized
     def probe(self):
-        from .rpc import NodeRPC
-        self.ready = False
+        try:
+            return self._probe()
+        except Exception:
+            self._publish_state({'state':'Starting / unavailable','height':0,'peers':0,
+                'reason':'readiness_check_failed','recoverable':False,'error':'The node readiness check failed.'})
+            raise
+
+    def _probe(self):
+        from .rpc import NodeRPC, NodeUnavailable
         from . import settings
         if settings.load(self.directory)['connection_mode']=='lite':
             from .connection import client
@@ -210,49 +234,185 @@ class Runtime:
                 remote=client(self.directory)
                 remote.require_network()
                 head=remote.head(require_synced=True)
-                self.ready=True;self.checked=time.monotonic()
-                if self.lite_connected_at is None:self.lite_connected_at=self.checked
-                self.state={'state':'Connected','height':head['height'],'peers':0,'head':head,'checked':self.checked,'mode':'lite'}
+                if self.lite_connected_at is None:self.lite_connected_at=time.monotonic()
+                return self._publish_state({'state':'Connected','height':head['height'],'peers':0,'head':head,'mode':'lite'},ready=True)
             except ValueError as error:
                 self.lite_connected_at=None
-                self.state={'state':'Service unavailable','height':0,'peers':0,'mode':'lite','error':str(error)}
-            return self.state
+                return self._publish_state({'state':'Service unavailable','height':0,'peers':0,'mode':'lite','error':str(error)})
         if not self.node.running:
             process=getattr(self.node,'process',None)
             if process is not None and process.poll() not in (None,0) and not self.node.stopping:
-                self.state={'state':'Failed','height':0,'peers':0,
-                    'error':f'The node stopped unexpectedly (exit code {process.poll()}). Check Node log, then restart or resync.'}
-                return self.state
-            self.state = {"state": "Stopped", "height": 0, "peers": 0, 'error': self.stop_reason}
-            return self.state
+                return self._publish_state({'state':'Failed','height':0,'peers':0,'reason':'node_failed',
+                    'error':f'The node stopped unexpectedly (exit code {process.poll()}). Check Node log, then restart or resync.'})
+            return self._publish_state({"state": "Stopped", "height": 0, "peers": 0, 'reason':'node_stopped','error': self.stop_reason})
         if storage_info(self.directory)['free'] < 512*1024*1024:
             self.stop_node()
             self.stop_reason = 'The node stopped because blockchain storage has less than 512 MiB free. Free space, then start the node again.'
-            self.state = {'state': 'Low disk space', 'height': 0, 'peers': 0, 'error': self.stop_reason}
-            return self.state
+            return self._publish_state({'state': 'Low disk space', 'height': 0, 'peers': 0, 'reason':'low_disk','error': self.stop_reason})
         if not self.rpc_available:
-            self.state = {'state':'Starting / loading chain','height':0,'peers':0}
-            return self.state
+            return self._publish_state({'state':'Starting / loading chain','height':0,'peers':0,'reason':'rpc_starting','recoverable':True})
         try:
             client = NodeRPC()
-            head = client.head()
-            peers = client.connected_peers()
-            eligible = head["synced"] and head["height"] > 0 and bool(peers)
-            if eligible:
+            # All attempts share the client's eight-second deadline. A tip
+            # update between RPCs is inconclusive; retry a fresh snapshot.
+            for attempt in range(3):
+                head = client.head()
+                peers = client.connected_peers()
+                reason = 'syncing' if not head['synced'] or not head['height'] else 'no_peers' if not peers else 'ready'
+                if reason == 'no_peers':break
+                if reason == 'syncing':
+                    if attempt < 2:
+                        self._lifecycle_event('node_probe_retry',reason=reason,attempt=attempt+1,height=head['height'])
+                        time.sleep(.15)
+                        continue
+                    break
                 template = client.template()
                 header = template.get('header','')
-                eligible = (template.get('synced') is True and template.get('height') == head['height']+1
-                    and isinstance(header,str) and len(header)==160 and header[:64].lower()==head['hash'].lower())
-                # Recheck the head after template retrieval to tolerate a head/template race.
+                if (not isinstance(header,str) or len(header)!=160
+                        or any(c not in '0123456789abcdefABCDEF' for c in header)
+                        or type(template.get('height')) is not int or type(template.get('synced')) is not bool):
+                    reason='invalid_template'
+                    break
                 newer = client.head()
-                eligible = eligible and newer["hash"] == head["hash"] and newer["synced"]
-            self.ready = bool(eligible)
-            self.checked = time.monotonic()
-            self.state = {"state": "Ready" if self.ready else "Synchronizing", "height": head["height"],
-                "peers": len(peers), "head": head, "checked": self.checked}
+                if newer['hash'] != head['hash']:
+                    reason='head_changed'
+                elif not template['synced'] or not newer['synced']:
+                    reason='syncing'
+                elif template['height'] != head['height']+1 or header[:64].lower()!=head['hash'].lower():
+                    reason='template_changed'
+                else:
+                    reason='ready'
+                    break
+                if attempt < 2:
+                    self._lifecycle_event('node_probe_retry',reason=reason,attempt=attempt+1,height=head['height'])
+                    time.sleep(.15)
+            state={"state": "Ready" if reason=='ready' else "Synchronizing", "height": head["height"],
+                "peers": len(peers), "head": head, 'reason':reason,'recoverable':reason!='invalid_template'}
+            if reason=='invalid_template':
+                state.update(state='Starting / unavailable',error='The node returned an invalid mining template.')
+            return self._publish_state(state,ready=reason=='ready')
+        except NodeUnavailable as exc:
+            return self._publish_state({**self.state,'state':'Starting / unavailable','reason':'rpc_unavailable','recoverable':True,'error':str(exc)})
         except ValueError as exc:
-            self.state = {**self.state, "state": "Starting / unavailable", "error": str(exc)}
+            return self._publish_state({**self.state, "state": "Starting / unavailable", 'reason':'invalid_response','recoverable':False,"error": str(exc)})
+
+    def _publish_state(self,state,*,ready=False):
+        signature=(state['state'],state.get('reason'))
+        if signature != (self.state['state'],self.state.get('reason')):
+            self._lifecycle_event('node_readiness',state=state['state'],reason=state.get('reason',''),height=state.get('height',0))
+        self.checked=time.monotonic()
+        self.state={**state,'checked':self.checked}
+        self.ready=ready
         return self.state
+
+    def _lifecycle_event(self,event,**fields):
+        """Bounded, timestamped control decisions without addresses or secrets."""
+        try:
+            path=self.directory/'logs'/'lifecycle.log'
+            path.parent.mkdir(parents=True,exist_ok=True)
+            if path.exists() and path.stat().st_size>5*1024*1024:
+                os.replace(path,path.with_suffix('.previous.log'))
+            with path.open('a',encoding='utf-8') as stream:
+                stream.write(json.dumps({'time':datetime.now(timezone.utc).isoformat(),'event':event,**fields})+'\n')
+        except OSError:
+            pass  # A logging failure must never prevent stopping owned work.
+
+    @property
+    def mining_generation(self):
+        with self._mining_lock:return self._mining_generation
+
+    @property
+    def mining_requested(self):
+        with self._mining_lock:return self._mining_request is not None
+
+    @property
+    def mining_waiting(self):
+        with self._mining_lock:return self._mining_waiting
+
+    def set_mining_editing(self,value):
+        with self._mining_lock:self._mining_editing=bool(value)
+
+    def cancel_mining(self):
+        with self._mining_lock:
+            self._mining_generation+=1
+            self._mining_request=None
+            self._mining_waiting=False
+            self._mining_unready_since=None
+            self._mining_ready_checks=0
+
+    @serialized
+    def stop_miner(self,reason='user_stop',*,cancel=True):
+        if cancel:self.cancel_mining()
+        self._lifecycle_event('mining_stop',reason=reason)
+        return self.miner.stop()
+
+    @serialized
+    def poll(self):
+        try:
+            self.probe()
+            self._maintain_mining()
+        except Exception:
+            self.mining_error='Mining stopped because node readiness could not be checked. Check the node, then start mining again.'
+            self.stop_miner('readiness_check_failed')
+            raise
+        return self.state
+
+    def _maintain_mining(self):
+        with self._mining_lock:
+            request=self._mining_request
+            generation=self._mining_generation
+            waiting=self._mining_waiting
+        if request is None:return
+        if self.closed or not self.node.running or not self.state.get('recoverable',False):
+            self.mining_error='Mining stopped: '+self.state.get('error','the node is unavailable or returned invalid work.')
+            self.stop_miner(self.state.get('reason','node_unavailable'))
+            return
+        if not self.miner.running and not waiting:
+            self.mining_error='The miner exited unexpectedly. Check the mining console, then start mining again.'
+            self.stop_miner('miner_exited')
+            return
+        with self._mining_lock:
+            if generation!=self._mining_generation:return
+            if self.ready:
+                if not waiting:
+                    if self._mining_unready_since is not None:
+                        self._lifecycle_event('mining_continued',reason='node_ready_within_grace')
+                    self._mining_unready_since=None
+                    return
+                if self._mining_editing:
+                    self._mining_ready_checks=0
+                    return
+                self._mining_ready_checks+=1
+                if self._mining_ready_checks<self.MINING_READY_CHECKS:return
+            else:
+                self._mining_ready_checks=0
+                if waiting:return
+                if self._mining_unready_since is None:
+                    self._mining_unready_since=time.monotonic()
+                    self._lifecycle_event('mining_grace',reason=self.state.get('reason'),seconds=self.MINING_SYNC_GRACE)
+                if time.monotonic()-self._mining_unready_since<self.MINING_SYNC_GRACE:return
+        if not self.ready:
+            self.miner.stop()
+            with self._mining_lock:
+                if generation==self._mining_generation:
+                    self._mining_waiting=True
+                    self._lifecycle_event('mining_waiting',reason=self.state.get('reason'))
+            return
+        payout,threads,backend,device,cpu,gpu=request
+        try:
+            self.start_miner(payout,threads,backend,device,cpu_limit=cpu,gpu_limit=gpu,generation=generation,automatic=True)
+        except MiningNotReady:
+            if generation!=self.mining_generation:return
+            with self._mining_lock:self._mining_ready_checks=0
+            if not self.state.get('recoverable',False):
+                self.mining_error='Mining recovery stopped: the node returned an invalid response.'
+                self.stop_miner('invalid_recovery_response')
+        except (ValueError,OSError,subprocess.SubprocessError) as error:
+            # No restart loop for GPU/configuration/process failures.
+            if generation!=self.mining_generation:return
+            self.mining_error='Mining could not resume. Check the mining console, then start mining again.'
+            self._lifecycle_event('mining_resume_failed',error_type=type(error).__name__)
+            self.stop_miner('restart_failed')
 
     @property
     def rpc_available(self):
@@ -268,9 +428,11 @@ class Runtime:
         return json.loads(result.stdout)
 
     @serialized
-    def start_miner(self, payout, threads, backend, device=0, *, cpu_limit=60, gpu_limit=60):
+    def start_miner(self, payout, threads, backend, device=0, *, cpu_limit=60, gpu_limit=60,generation=None,automatic=False):
         if self.closed:
             raise ValueError('Application is shutting down')
+        if generation is None:generation=self.mining_generation
+        if generation!=self.mining_generation:raise ValueError('Mining start was cancelled')
         from . import settings
         if settings.load(self.directory)['connection_mode']=='lite':raise ValueError('Solo mining requires the managed local node')
         from .mining import validate,worker_threads
@@ -279,7 +441,7 @@ class Runtime:
         payout = wallet_utils.validate_address(payout)
         self.probe()
         if not self.ready or time.monotonic()-self.checked > 10:
-            raise ValueError("Wait for the mainnet node to sync and connect before starting mining.")
+            raise MiningNotReady("Wait for the mainnet node to sync and connect before starting mining.")
         if type(threads) is not int or not 1 <= threads <= (os.cpu_count() or 1):
             raise ValueError("Invalid CPU thread count")
         threads=min(threads,worker_threads(cpu_limit))
@@ -291,16 +453,28 @@ class Runtime:
         available = hardware.get('opencl',[])
         if not available or device >= len(available):
             raise ValueError('Mining requires a supported GPU and CPU.')
-        self.miner.metrics = {}
-        self.miner.start([verified_component("miner"), "--payout", payout, "--threads", str(threads),
-            "--backend", backend, "--device", str(device), "--port", str(self.STRATUM_PORT),
-            "--gpu-limit",str(gpu_limit),
-            "--profile-dir", f"mining-profiles/{backend}-{device}"], self.directory,cpu_limit=cpu_limit)
+        if time.monotonic()-self.checked>10:
+            self.probe()
+            if not self.ready:raise MiningNotReady('Wait for the mainnet node to sync and connect before starting mining.')
+        with self._mining_lock:
+            if generation!=self._mining_generation:raise ValueError('Mining start was cancelled')
+            if automatic and self._mining_editing:raise MiningNotReady('Finish reviewing mining settings before resuming.')
+            self.miner.metrics = {}
+            self.miner.start([verified_component("miner"), "--payout", payout, "--threads", str(threads),
+                "--backend", backend, "--device", str(device), "--port", str(self.STRATUM_PORT),
+                "--gpu-limit",str(gpu_limit),
+                "--profile-dir", f"mining-profiles/{backend}-{device}"], self.directory,cpu_limit=cpu_limit)
+            self._mining_request=(payout,threads,backend,device,cpu_limit,gpu_limit)
+            self._mining_waiting=False
+            self._mining_unready_since=None
+            self._mining_ready_checks=0
+            self.mining_error=''
+        self._lifecycle_event('mining_resumed' if automatic else 'mining_started',cpu_limit=cpu_limit,gpu_limit=gpu_limit,device=device)
 
     @serialized
     def stop_node(self):
         self.ready = False
-        self.miner.stop()
+        self.stop_miner('node_stop')
         result = self.node.stop()
         if not result['graceful']:
             self.stop_reason = 'The node did not shut down cleanly. Review its logs before restarting.'

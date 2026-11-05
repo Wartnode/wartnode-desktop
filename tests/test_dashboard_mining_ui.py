@@ -43,7 +43,7 @@ class DashboardMiningTests(unittest.TestCase):
             self.assertEqual(events[1][0],'start')
             self.assertEqual(started.call_count,1)
             self.assertEqual(started.call_args.args[0],OWNER)
-            self.assertEqual(started.call_args.kwargs,dict(cpu_limit=90,gpu_limit=90))
+            self.assertEqual(started.call_args.kwargs,dict(cpu_limit=90,gpu_limit=90,generation=window.runtime.mining_generation))
             self.assertEqual(settings.load(window.directory)['payout_address'],OWNER)
             self.assertTrue(window.mining_presets['heavy'].isChecked())
 
@@ -65,6 +65,65 @@ class DashboardMiningTests(unittest.TestCase):
         with patch.object(window.runtime,'miner',fake):window.render_miner_telemetry()
         self.assertEqual(window.overview_miner.value.text(),'Running')
         self.assertIn('Waiting for fresh',window.overview_miner.detail.text())
+
+    def test_waiting_is_visible_and_stop_cancels_recovery_before_worker_runs(self):
+        window=self.window;window.timer.stop()
+        window.runtime._mining_request=(OWNER,1,'opencl',0,60,60)
+        window.runtime._mining_waiting=True
+        window.render_mining_status();window.render_miner_telemetry()
+        self.assertEqual(window.mining_status.text(),'Waiting for node')
+        self.assertEqual(window.overview_miner.value.text(),'Waiting for node')
+        self.assertIn('resume automatically',window.mining_session.text())
+        self.assertTrue(window.stop_mining.isEnabled())
+        self.assertFalse(window.start_mining.isEnabled())
+        with patch.object(window,'submit') as submit:
+            window.stop_mining.click()
+        self.assertFalse(window.runtime.mining_requested)
+        self.assertFalse(window.runtime.mining_waiting)
+        submit.assert_called_once()
+
+    def test_node_stop_cancels_waiting_before_worker_runs(self):
+        window=self.window;window.timer.stop()
+        window.runtime._mining_request=(OWNER,1,'opencl',0,60,60)
+        window.runtime._mining_waiting=True
+        with patch.object(window,'submit'):
+            window.stop_node()
+        self.assertFalse(window.runtime.mining_requested)
+
+    def test_saving_settings_while_waiting_cancels_the_previous_recovery_request(self):
+        window=self.window;window.timer.stop()
+        window.runtime._mining_request=(OWNER,1,'opencl',0,60,60)
+        window.runtime._mining_waiting=True
+        with patch.object(window.runtime,'start_miner') as start,patch.object(window,'tick'):
+            window.show_mining_settings('eco');window.payout.setText(OWNER)
+            self.assertTrue(window.runtime._mining_editing)
+            window.apply_mining_settings();until(lambda:not window.tasks)
+        start.assert_not_called()
+        self.assertFalse(window.runtime.mining_requested)
+        self.assertFalse(window.runtime._mining_editing)
+        self.assertEqual(settings.load(window.directory)['cpu_limit'],30)
+
+    def test_poll_callback_does_not_stop_a_miner_on_a_single_unready_result(self):
+        window=self.window;window.timer.stop()
+        fake=SimpleNamespace(running=True,lines=deque(),metrics={},sample=None,process=None)
+        fake.stop=Mock()
+        state={'state':'Synchronizing','height':100,'peers':1,'reason':'syncing','recoverable':True}
+        window.runtime.ready=False
+        with patch.object(window.runtime,'miner',fake),patch.object(window.runtime,'poll',return_value=state) as poll,patch.object(window,'refresh_process_statistics'):
+            window.tick();until(lambda:not window.tasks)
+            poll.assert_called_once()
+            fake.stop.assert_not_called()
+
+    def test_hiding_to_tray_ends_settings_review_so_it_cannot_hold_recovery(self):
+        window=self.window;window.timer.stop()
+        window.preferences['close_to_tray']=True
+        window.show_mining_settings('eco')
+        self.assertTrue(window.runtime._mining_editing)
+        with patch('wartnode.ui.QSystemTrayIcon.isSystemTrayAvailable',return_value=True),patch.object(window.tray,'showMessage'):
+            window.close()
+        until(lambda:not window.tasks)
+        self.assertFalse(window.runtime._mining_editing)
+        self.assertFalse(window.editing_mining)
 
 
 if __name__ == '__main__':unittest.main()

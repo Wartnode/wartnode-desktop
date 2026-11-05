@@ -9,7 +9,7 @@ Download the installer or portable ZIP, matching source ZIP, `SHA256SUMS`,
 PowerShell can show a file's SHA-256 value:
 
 ```powershell
-Get-FileHash .\Wartnode-Desktop-0.5.0-beta.1-windows-x64-setup.exe -Algorithm SHA256
+Get-FileHash .\Wartnode-Desktop-0.5.0-beta.2-windows-x64-setup.exe -Algorithm SHA256
 ```
 
 Compare it with `SHA256SUMS`. A matching checksum detects corruption; project

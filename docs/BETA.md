@@ -1,12 +1,27 @@
-# 0.5.0-beta.1
+# 0.5.0-beta.2
 
-This beta introduces the Dashboard layout across Overview, Node, Wallet, Mine,
+This hotfix includes the Dashboard layout introduced in 0.5.0-beta.1 across Overview, Node, Wallet, Mine,
 Explorer and Settings. Wallets use a fresh shared-password profile with labeled
 addresses, an address book and complete encrypted profile backups. Overview shows
 one current connection status, combined funds, mining performance and network
 statistics. Difficulty uses GH/TH.
 
-## Changes
+## Mining recovery hotfix
+
+Brief sync transitions and head/template races no longer permanently stop solo
+mining. Readiness snapshots are retried, running miners have a five-second grace
+period, and a longer temporary interruption shows **Waiting for node**. Two
+healthy checks allow automatic resume with the reviewed payout and limits. Stop
+mining, Stop node, mode changes, resync and Exit cancel recovery. Miner crashes,
+invalid responses and failed restarts require manual action. Intent is not saved
+across app restarts. See [behavior and diagnostics](MINING_RECOVERY.md).
+
+Upgrade from 0.5.0-beta.1 using the installer after exiting the app. The profile
+and data format are unchanged; a fresh profile or chain resync is not required.
+Recovery has automated outage, reorg, cancellation and native UI coverage; no new
+physical GPU soak or Windows 11 VM certification is claimed for this hotfix.
+
+## Dashboard features
 
 - Full/Lite selection and detailed node statistics are on Node; logs open separately.
 - Mining centers on hashrate charts, supported CPU/GPU readings, session counters

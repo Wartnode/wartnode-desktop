@@ -8,6 +8,22 @@ from .compat import wallet_utils as crypto
 
 
 class MiningActions:
+    def stop_miner(self):
+        self.runtime.cancel_mining()
+        self.mining_busy=True
+        def stopped(*_):
+            self.mining_busy=False
+            self.tick()
+        self.submit(lambda:self.runtime.stop_miner(cancel=False),stopped,lifecycle=True)
+
+    def render_mining_status(self):
+        running=self.runtime.miner.running
+        waiting=self.runtime.mining_waiting
+        status='Waiting for node' if waiting else 'Mining to local node' if running else 'Unavailable in Lite mode' if self.preferences['connection_mode']=='lite' else 'Stopped'
+        self.mining_status.setText(status)
+        self.summaries['Solo mining'].setText('Waiting for node' if waiting else 'Running' if running else 'Stopped')
+        self.stop_mining.setEnabled(running or self.runtime.mining_requested or self.mining_busy)
+
     def restore_mining_form(self):
         fields=(self.payout,self.mining_mode,self.cpu_limit,self.gpu_limit,self.device)
         for field in fields:field.blockSignals(True)
@@ -22,6 +38,7 @@ class MiningActions:
     def show_mining_settings(self,preset=None,payout=None):
         if self.mining_busy or self.mode_busy or self.init_busy:return
         self.editing_mining=True
+        self.runtime.set_mining_editing(True)
         self.restore_mining_form()
         if preset in PRESETS:
             self.mining_mode.setCurrentIndex(self.mining_mode.findData(preset))
@@ -36,6 +53,7 @@ class MiningActions:
 
     def cancel_mining_settings(self):
         self.editing_mining=False
+        self.runtime.set_mining_editing(False)
         self.restore_mining_form()
         self.render_mining_configuration()
         self.update_state(self.runtime.state)
@@ -52,24 +70,29 @@ class MiningActions:
         except ValueError as error:
             self.notice.setText(str(error));self.mining_dialog_error.setText(str(error));return
         was_running=self.runtime.miner.running
+        was_waiting=self.runtime.mining_waiting
+        self.runtime.cancel_mining()
+        generation=self.runtime.mining_generation
+        self.runtime.set_mining_editing(False)
         self.mining_busy=True
         self.editing_mining=False
         self.mining_settings_dialog.hide()
         def apply():
             with self.runtime.operation_lock:
+                self.runtime.stop_miner('settings_change',cancel=False)
                 if was_running:
-                    self.runtime.miner.stop()
                     if self.runtime.miner.running:raise ValueError('The previous miner has not stopped')
                 preferences=settings.save(self.directory,mining_mode=mode,cpu_limit=cpu,gpu_limit=gpu,
                     payout_address=payout,gpu_device=device,cpu_threads=worker_threads(cpu))
                 if was_running:
-                    self.runtime.start_miner(payout,worker_threads(cpu),backend,device,cpu_limit=cpu,gpu_limit=gpu)
+                    self.runtime.start_miner(payout,worker_threads(cpu),backend,device,cpu_limit=cpu,gpu_limit=gpu,generation=generation)
                 return preferences
         def applied(result,error):
             self.mining_busy=False
             self.preferences=settings.load(self.directory)
             self.restore_mining_form();self.render_mining_configuration()
-            if result:self.notice.setText('Miner restarted with the reviewed configuration.' if was_running else 'Mining settings saved.')
+            if result:self.notice.setText('Miner restarted with the reviewed configuration.' if was_running else
+                'Mining settings saved. Press Start mining when the node is ready.' if was_waiting else 'Mining settings saved.')
             self.tick()
         self.submit(apply,applied,lifecycle=True)
 
@@ -111,9 +134,10 @@ class MiningActions:
                 f'\nPower {value(gpu.power_w," W")} · Core {value(gpu.core_mhz," MHz")} · Memory {value(gpu.memory_mhz," MHz")}')
         else:
             for panel in self.miner_panels.values():panel.set_value('—')
-            self.overview_miner.set_value('Running' if running else 'Unavailable' if self.preferences['connection_mode']=='lite' else 'Stopped',
-                'Waiting for fresh miner telemetry.' if running else 'Solo mining requires Full node.' if self.preferences['connection_mode']=='lite' else 'Start mining to see performance')
-            self.mining_session.setText('Waiting for fresh miner telemetry.' if running else 'Miner stopped · session telemetry inactive')
+            waiting=self.runtime.mining_waiting
+            self.overview_miner.set_value('Running' if running else 'Waiting for node' if waiting else 'Unavailable' if self.preferences['connection_mode']=='lite' else 'Stopped',
+                'Waiting for fresh miner telemetry.' if running else 'Mining will resume automatically when the node is ready.' if waiting else 'Solo mining requires Full node.' if self.preferences['connection_mode']=='lite' else 'Start mining to see performance')
+            self.mining_session.setText('Waiting for fresh miner telemetry.' if running else 'Waiting for node · mining will resume automatically' if waiting else self.runtime.mining_error or 'Miner stopped · session telemetry inactive')
             self.gpu_telemetry.setText('GPU telemetry unavailable' if running else 'GPU telemetry appears while mining.')
             if not running:self.hash_history.clear()
         cpu=self.miner_resources.get('cpu_percent') if running else None

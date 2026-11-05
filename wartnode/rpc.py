@@ -23,6 +23,10 @@ class BroadcastUncertain(NodeError):
     pass
 
 
+class NodeUnavailable(NodeError):
+    """A temporary transport failure, rather than an invalid node response."""
+
+
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *args, **kwargs):
         raise NodeError("Node redirects are forbidden")
@@ -51,7 +55,7 @@ class NodeRPC:
         if self.cancel is not None and self.cancel.is_set():
             raise NodeError("Operation cancelled")
         if time.monotonic() >= self.deadline:
-            raise NodeError("Node operation timed out")
+            raise NodeUnavailable("Node operation timed out")
 
     def request(self, path, payload=None):
         self.check_cancelled()
@@ -71,7 +75,11 @@ class NodeRPC:
                     raise NodeError("Node returned an unexpected HTTP status")
                 raw = response.read_bounded(4 * 1024 * 1024)
                 result = json.loads(raw)
-        except (OSError, urllib.error.URLError, ValueError) as exc:
+        except (OSError, urllib.error.URLError) as exc:
+            if payload is not None:
+                raise BroadcastUncertain("Broadcast result is uncertain. Check the saved payment before sending again.") from exc
+            raise NodeUnavailable("The node is unavailable") from exc
+        except ValueError as exc:
             if payload is not None:
                 raise BroadcastUncertain("Broadcast result is uncertain. Check the saved payment before sending again.") from exc
             raise NodeError("The node is unavailable or returned an invalid response") from exc
