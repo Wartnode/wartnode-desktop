@@ -1,8 +1,8 @@
 # Wartnode-Desktop screenshots
 
-A tour of the six main pages, captured from **v0.5.0-beta.1** on November 5,
-2026. Balances, block heights, network statistics and mining readings reflect
-the capture session.
+A tour of the six main pages, captured on November 5, 2026. The Mine screenshot
+shows **v0.5.0-beta.2**; the other screenshots show **v0.5.0-beta.1**. Balances,
+block heights, network statistics and mining readings reflect the capture sessions.
 
 [Overview](#overview) · [Node](#node) · [Wallet](#wallet) · [Mine](#mine) · [Explorer](#explorer) · [Settings](#settings)
 
@@ -39,10 +39,10 @@ Choose Eco 30%, Balanced 60%, Heavy 90% or Custom settings, with configuration
 and the mining console in separate windows. While mining, the page presents
 Janus, GPU SHA and CPU Verus hashrates, a performance chart, available GPU
 sensors, and miner CPU and memory readings. Reward history for the payout
-address appears below. This capture shows a stopped miner, so its performance
-and telemetry fields are inactive.
+address appears below. This capture shows an active mining session with live
+hashrates, session counters, a performance chart and supported telemetry.
 
-![Mine page showing Eco, Balanced, Heavy and Custom controls, inactive hashrate and telemetry panels, and payout-address reward history](screenshots/mine.png)
+![Mine page showing an active Balanced mining session, live Janus, GPU SHA and CPU Verus hashrates, a performance chart, telemetry and payout-address reward history](screenshots/mine.png)
 
 ## Explorer
 
