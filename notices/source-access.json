@@ -1,0 +1,343 @@
+{
+  "schema": 1,
+  "scope": "Exact official source access for unmodified Qt/PySide/Shiboken and CPython inputs; upstream node/miner/wallet archives are included under vendor/sources.",
+  "sources": [
+    {
+      "name": "Qt Base",
+      "version": "6.12.0",
+      "url": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qtbase-everywhere-src-6.12.0.tar.xz",
+      "sha256": "a951bd163c7b80fc6b8c88d7668fb56abf91c152373e13c10666763238131307",
+      "bytes": 51220268
+    },
+    {
+      "name": "Qt SVG",
+      "version": "6.12.0",
+      "url": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qtsvg-everywhere-src-6.12.0.tar.xz",
+      "sha256": "e4ab39534ec97987b1b9b60ef7f4d3253d5912a69f8c713a01753174a4029331",
+      "bytes": 2341876
+    },
+    {
+      "name": "Qt Image Formats",
+      "version": "6.12.0",
+      "url": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qtimageformats-everywhere-src-6.12.0.tar.xz",
+      "sha256": "0943132b5db8de6b6a7f1d162682173e8763c7ed94e80fd39113292845f67762",
+      "bytes": 1848620
+    },
+    {
+      "name": "PySide6 and Shiboken",
+      "version": "6.12.0",
+      "url": "https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-6.12.0-src/pyside-setup-everywhere-src-6.12.0.tar.xz",
+      "sha256": "099c1a597cf33c1b000e11cf68a0b82d216fb802bf81726efc720394f10c7751",
+      "bytes": 18211772
+    },
+    {
+      "name": "CPython",
+      "version": "3.14.10",
+      "url": "https://www.python.org/ftp/python/3.14.10/Python-3.14.10.tar.xz",
+      "sha256": "de414a57119abef52784d8993e341d53aed635fc2b05c2607d9f98a2c5b72032",
+      "bytes": 24240392
+    }
+  ],
+  "python_packages": [
+    {
+      "name": "PySide6_Essentials",
+      "version": "6.12.0",
+      "metadata_url": "https://pypi.org/pypi/PySide6_Essentials/6.12.0/json",
+      "license": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+      "sources": []
+    },
+    {
+      "name": "altgraph",
+      "version": "0.17.5",
+      "metadata_url": "https://pypi.org/pypi/altgraph/0.17.5/json",
+      "license": "MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/7e/f8/97fdf103f38fed6792a1601dbc16cc8aac56e7459a9fff08c812d8ae177a/altgraph-0.17.5.tar.gz",
+          "sha256": "c87b395dd12fabde9c99573a9749d67da8d29ef9de0125c7f536699b4a9bc9e7",
+          "bytes": 48428
+        }
+      ]
+    },
+    {
+      "name": "cffi",
+      "version": "2.1.1",
+      "metadata_url": "https://pypi.org/pypi/cffi/2.1.1/json",
+      "license": "MIT-0",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/9e/ef/008a1939e372c06329a3fce4279c02f328488f3526744906eeec3da7ad5f/cffi-2.1.1.tar.gz",
+          "sha256": "dd31f52ea1086513bb9df30f8fcee9b8918323ae067a3d5b78bc826a000712be",
+          "bytes": 530807
+        }
+      ]
+    },
+    {
+      "name": "colorama",
+      "version": "0.4.6",
+      "metadata_url": "https://pypi.org/pypi/colorama/0.4.6/json",
+      "license": "",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93a6792e2acffb9d9d5cb0a5cfd8802644b7b1c9a02e4/colorama-0.4.6.tar.gz",
+          "sha256": "08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44",
+          "bytes": 27697
+        }
+      ]
+    },
+    {
+      "name": "cryptography",
+      "version": "50.0.2",
+      "metadata_url": "https://pypi.org/pypi/cryptography/50.0.2/json",
+      "license": "Apache-2.0 OR BSD-3-Clause",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/9d/af/182eb91b0df3fe75c4d9f26fe70684569566745f6ba7e5c9c73a862c5252/cryptography-50.0.2.tar.gz",
+          "sha256": "7b46165bb56eb4704e2eaaf86f3c940d19154535d9b0ca7d6d590b04060e00d5",
+          "bytes": 880623
+        }
+      ]
+    },
+    {
+      "name": "ecdsa",
+      "version": "0.19.2",
+      "metadata_url": "https://pypi.org/pypi/ecdsa/0.19.2/json",
+      "license": "MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/25/ca/8de7744cb3bc966c85430ca2d0fcaeea872507c6a4cf6e007f7fe269ed9d/ecdsa-0.19.2.tar.gz",
+          "sha256": "62635b0ac1ca2e027f82122b5b81cb706edc38cd91c63dda28e4f3455a2bf930",
+          "bytes": 202432
+        }
+      ]
+    },
+    {
+      "name": "mnemonic",
+      "version": "0.21",
+      "metadata_url": "https://pypi.org/pypi/mnemonic/0.21/json",
+      "license": "MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/ff/77/e6232ed59fbd7b90208bb8d4f89ed5aabcf30a524bc2fb8f0dafbe8e7df9/mnemonic-0.21.tar.gz",
+          "sha256": "1fe496356820984f45559b1540c80ff10de448368929b9c60a2b55744cc88acf",
+          "bytes": 152462
+        }
+      ]
+    },
+    {
+      "name": "packaging",
+      "version": "26.3",
+      "metadata_url": "https://pypi.org/pypi/packaging/26.3/json",
+      "license": "Apache-2.0 OR BSD-2-Clause",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/7d/fa/3944b40b07da9ce895c0e6303a5ab7d53da063554f534556b134a54d6093/packaging-26.3.tar.gz",
+          "sha256": "94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79",
+          "bytes": 313412
+        }
+      ]
+    },
+    {
+      "name": "pefile",
+      "version": "2024.8.26",
+      "metadata_url": "https://pypi.org/pypi/pefile/2024.8.26/json",
+      "license": "MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/03/4f/2750f7f6f025a1507cd3b7218691671eecfd0bbebebe8b39aa0fe1d360b8/pefile-2024.8.26.tar.gz",
+          "sha256": "3ff6c5d8b43e8c37bb6e6dd5085658d658a7a0bdcd20b6a07b1fcfc1c4e9d632",
+          "bytes": 76008
+        }
+      ]
+    },
+    {
+      "name": "pillow",
+      "version": "13.0.0",
+      "metadata_url": "https://pypi.org/pypi/pillow/13.0.0/json",
+      "license": "MIT-CMU",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/ce/a4/9cc30690a394a8305e8be4c9036aa16d0dfddadd09079860b582f562496d/pillow-13.0.0.tar.gz",
+          "sha256": "cdcd1ba258178f7356d74170c9a81ba4eab6a5d55748bc402a5a2a6fe6be3510",
+          "bytes": 47058631
+        }
+      ]
+    },
+    {
+      "name": "pycoin",
+      "version": "0.92.20241201",
+      "metadata_url": "https://pypi.org/pypi/pycoin/0.92.20241201/json",
+      "license": "http://opensource.org/licenses/MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/61/23/f6cbdfcfb23700ffb80fbb845a7e682c94d8555cf77a1442a13f8ddd01e3/pycoin-0.92.20241201.tar.gz",
+          "sha256": "6e937be181573ccf02b35064844bec46de130386b45f3df196d3074a8c790512",
+          "bytes": 361620
+        }
+      ]
+    },
+    {
+      "name": "pycparser",
+      "version": "3.11",
+      "metadata_url": "https://pypi.org/pypi/pycparser/3.11/json",
+      "license": "BSD-3-Clause",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/da/a8/c5fdbeee588bb8ada9458774f43adf1bdd30bd59157055142183e769a024/pycparser-3.11.tar.gz",
+          "sha256": "d875f09c3507d00e1aba0eecc6dcadc1352f30fff09dc6bff2f1c2935e97c2bc",
+          "bytes": 113796
+        }
+      ]
+    },
+    {
+      "name": "pycryptodomex",
+      "version": "3.24.1",
+      "metadata_url": "https://pypi.org/pypi/pycryptodomex/3.24.1/json",
+      "license": "BSD, Public Domain",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/f4/e7/50e72301e32acb73a314e663c2014e1ddefc019d5f434ff14ec89861d664/pycryptodomex-3.24.1.tar.gz",
+          "sha256": "09081666ffc599976c0b8b29caf2cf82212c0f05bed233c8f8ed53e4f6e1d356",
+          "bytes": 4934627
+        }
+      ]
+    },
+    {
+      "name": "pyinstaller",
+      "version": "6.22.3",
+      "metadata_url": "https://pypi.org/pypi/pyinstaller/6.22.3/json",
+      "license": "GPLv2-or-later with a special exception which allows to use PyInstaller to build and distribute non-free programs (including commercial ones)",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/63/41/f90302845945abd4ed647933ff5ee7c6ac93983187be67f897b6cb613331/pyinstaller-6.22.3.tar.gz",
+          "sha256": "05eb2f5615503e72939a7224d68b4aff572c6b0438ee4a17d0a4b481f399362d",
+          "bytes": 4437180
+        }
+      ]
+    },
+    {
+      "name": "pyinstaller-hooks-contrib",
+      "version": "2026.8",
+      "metadata_url": "https://pypi.org/pypi/pyinstaller-hooks-contrib/2026.8/json",
+      "license": null,
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/c9/3b/fab1a12a21bf9223af012e5dd002b7d4265683d21d9fabbd0ccb347316e4/pyinstaller_hooks_contrib-2026.8.tar.gz",
+          "sha256": "4d825786ad7a9b7dbcc52d612748a34562fe273461bcfd88f4d549c594bbf8f9",
+          "bytes": 176955
+        }
+      ]
+    },
+    {
+      "name": "pywin32-ctypes",
+      "version": "0.2.3",
+      "metadata_url": "https://pypi.org/pypi/pywin32-ctypes/0.2.3/json",
+      "license": "BSD-3-Clause",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/85/9f/01a1a99704853cb63f253eea009390c88e7131c67e66a0a02099a8c917cb/pywin32-ctypes-0.2.3.tar.gz",
+          "sha256": "d162dc04946d704503b2edc4d55f3dba5c1d539ead017afa00142c38b9885755",
+          "bytes": 29471
+        }
+      ]
+    },
+    {
+      "name": "qrcode",
+      "version": "8.2",
+      "metadata_url": "https://pypi.org/pypi/qrcode/8.2/json",
+      "license": "BSD",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/8f/b2/7fc2931bfae0af02d5f53b174e9cf701adbb35f39d69c2af63d4a39f81a9/qrcode-8.2.tar.gz",
+          "sha256": "35c3f2a4172b33136ab9f6b3ef1c00260dd2f66f858f24d88418a015f446506c",
+          "bytes": 43317
+        }
+      ]
+    },
+    {
+      "name": "setuptools",
+      "version": "84.2.0",
+      "metadata_url": "https://pypi.org/pypi/setuptools/84.2.0/json",
+      "license": "MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/63/40/e2c41d00a4bfea5548c31420a74c6cf149cc0e7c36b45c4c82202ce867aa/setuptools-84.2.0.tar.gz",
+          "sha256": "6f445ca2ce864605f81e223f262b4c94ffcb9a4a63473bae0ed7be5aab0291da",
+          "bytes": 1227656
+        }
+      ]
+    },
+    {
+      "name": "setuptools-scm",
+      "version": "9.2.2",
+      "metadata_url": "https://pypi.org/pypi/setuptools-scm/9.2.2/json",
+      "license": "Permission is hereby granted, free of charge, to any person obtaining a copy\n        of this software and associated documentation files (the \"Software\"), to deal\n        in the Software without restriction, including without limitation the rights\n        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n        copies of the Software, and to permit persons to whom the Software is\n        furnished to do so, subject to the following conditions:\n        \n        The above copyright notice and this permission notice shall be included in\n        all copies or substantial portions of the Software.\n        \n        THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n        THE SOFTWARE.\n        ",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/7b/b1/19587742aad604f1988a8a362e660e8c3ac03adccdb71c96d86526e5eb62/setuptools_scm-9.2.2.tar.gz",
+          "sha256": "1c674ab4665686a0887d7e24c03ab25f24201c213e82ea689d2f3e169ef7ef57",
+          "bytes": 203385
+        }
+      ]
+    },
+    {
+      "name": "shiboken6",
+      "version": "6.12.0",
+      "metadata_url": "https://pypi.org/pypi/shiboken6/6.12.0/json",
+      "license": "LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only",
+      "sources": []
+    },
+    {
+      "name": "six",
+      "version": "1.17.0",
+      "metadata_url": "https://pypi.org/pypi/six/1.17.0/json",
+      "license": "MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz",
+          "sha256": "ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81",
+          "bytes": 34031
+        }
+      ]
+    },
+    {
+      "name": "truststore",
+      "version": "0.10.5",
+      "metadata_url": "https://pypi.org/pypi/truststore/0.10.5/json",
+      "license": "MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/ee/9f/c5201d42a484c061e528825fc8e2d565f5abd50a4ced6fb7d29c4ec99b2b/truststore-0.10.5.tar.gz",
+          "sha256": "30d36967ccaded5cbb38d602c433f53600036c79d502f4533a49b60a03bbefcd",
+          "bytes": 28091
+        }
+      ]
+    },
+    {
+      "name": "wheel",
+      "version": "0.46.2",
+      "metadata_url": "https://pypi.org/pypi/wheel/0.46.2/json",
+      "license": "MIT",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/9b/92/3a64fa9639b8e290fe8630d8067a66f7c5510845c6d73686ad880c9b04d9/wheel-0.46.2.tar.gz",
+          "sha256": "3d79e48fde9847618a5a181f3cc35764c349c752e2fe911e65fa17faab9809b0",
+          "bytes": 60274
+        }
+      ]
+    },
+    {
+      "name": "zxing-cpp",
+      "version": "3.1.1",
+      "metadata_url": "https://pypi.org/pypi/zxing-cpp/3.1.1/json",
+      "license": "Apache-2.0",
+      "sources": [
+        {
+          "url": "https://files.pythonhosted.org/packages/b9/30/ad0e0352c593712ebb47143571ff11b130812e2852d7540e7c80cdf23340/zxing_cpp-3.1.1.tar.gz",
+          "sha256": "1051a521b21a9fe206702ad4186aeb195154e3e1badcd99576d030723f36382b",
+          "bytes": 1437030
+        }
+      ]
+    }
+  ]
+}

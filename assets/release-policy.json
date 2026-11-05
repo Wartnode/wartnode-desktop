@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "application": "wartnode",
+  "repository": "Wartnode/wartnode-desktop",
+  "keys": {
+    "release": {
+      "public_key": "ab4217381711d839469992a3e8ca5931477953b75b3ef1c344e3c6b4f76c2e45",
+      "key_id": "d5a20006f0fc5b850e8de7c8836df1c33af54c1fa240a2026f5dd878a9f2bd52"
+    },
+    "update": {
+      "public_key": "b48a4f502cd92beec4f89e03171b4eceac1850037927107676565fa08a741dc6",
+      "key_id": "b5a47f74a13d9178fc348a1a48deefb376989345a4d6bad1aaa8bfaeac1884a9"
+    }
+  }
+}

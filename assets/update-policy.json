@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "application": "wartnode",
+  "channel": "beta",
+  "enabled": false,
+  "public_key": "b48a4f502cd92beec4f89e03171b4eceac1850037927107676565fa08a741dc6",
+  "manifest_url": "https://github.com/Wartnode/wartnode-desktop/releases/latest/download/update-envelope.json"
+}

@@ -1,0 +1,91 @@
+--- a/src/node/asyncio/conman.cpp
++++ b/src/node/asyncio/conman.cpp
+@@ -74,14 +74,25 @@
+         spdlog::debug("[conman] unref -> {}, {}", refcount, tag);
+     if (closing) {
+         if (refcount == 1) { // 1 for the wakeup callback
+-            uv_close((uv_handle_t*)&wakeup, close_caller);
++            close_wakeup();
+         }
+     }
+ }
+ 
++void Conman::close_wakeup()
++{
++    std::unique_lock<std::mutex> lock(mutex);
++    if (wakeupClosing)
++        return;
++    wakeupClosing = true;
++    uv_close((uv_handle_t*)&wakeup, close_caller);
++}
++
+ void Conman::async_send(std::shared_ptr<Connection> c) // CALLED BY PROCESSING THREAD
+ {
+     std::unique_lock<std::mutex> lock(mutex);
++    if (wakeupClosing)
++        return;
+     events.push(Send { std::move(c) });
+     uv_async_send(&wakeup);
+ }
+@@ -89,6 +100,8 @@
+ void Conman::async_delete(std::shared_ptr<Connection> pcon) // POTENTIALLY CALLED BY OTHER THREAD
+ {
+     std::unique_lock<std::mutex> lock(mutex);
++    if (wakeupClosing)
++        return;
+     events.push(Delete { std::move(pcon) });
+     uv_async_send(&wakeup);
+ }
+@@ -97,6 +110,8 @@
+     int32_t error) // POTENTIALLY CALLED BY OTHER THREAD
+ {
+     std::unique_lock<std::mutex> lock(mutex);
++    if (wakeupClosing)
++        return;
+     events.push(Close { std::move(c), error });
+     uv_async_send(&wakeup);
+ }
+@@ -104,6 +119,8 @@
+ void Conman::async_validate(std::weak_ptr<Connection> c, bool accept, int64_t rowid)
+ {
+     std::unique_lock<std::mutex> lock(mutex);
++    if (wakeupClosing)
++        return;
+     events.push(Validation { std::move(c), accept, rowid });
+     uv_async_send(&wakeup);
+ }
+@@ -267,7 +284,7 @@
+     }
+     peerServer.async_shutdown();
+     if (closing && refcount == 1) { // 1 for the wakeup callback
+-        uv_close((uv_handle_t*)&wakeup, close_caller);
++        close_wakeup();
+     }
+ }
+ 
+--- a/src/node/asyncio/conman.hpp
++++ b/src/node/asyncio/conman.hpp
+@@ -42,6 +42,7 @@
+     void unlink(std::shared_ptr<Connection> const pcon);
+     void addref(const char*);
+     void unref(const char*);
++    void close_wakeup();
+ 
+     void async_send(std::shared_ptr<Connection> c); // CALLED BY PROCESSING THREAD
+     void async_delete(std::shared_ptr<Connection> c); // POTENTIALLY CALLED BY OTHER THREAD
+@@ -123,12 +124,15 @@
+     void async_add_event(Event e)
+     {
+         std::unique_lock<std::mutex> lock(mutex);
++        if (wakeupClosing)
++            return;
+         events.push(std::move(e));
+         uv_async_send(&wakeup);
+     }
+     //--------------------------------------
+     // uv-mutex  locked shared members (message queues for uv thread)
+     std::mutex mutex;
++    bool wakeupClosing { false };
+     std::queue<Event> events;
+ 
+     // handle_event functions

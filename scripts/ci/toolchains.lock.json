@@ -1,0 +1,31 @@
+{
+  "python": "3.14.10",
+  "inno_setup": {
+    "version": "7.1.1",
+    "url": "https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe",
+    "sha256": "8a5a6711c3766a6e5fb74f280ba0e3551e719ce94538d901fdbd1f8f9920b3f0"
+  },
+  "llvm": {
+    "version": "23.1.4",
+    "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.4/clang%2Bllvm-23.1.4-x86_64-pc-windows-msvc.tar.zst",
+    "sha256": "1a3f2f998e230b5791cc4e2bfe11a1f7c07fe42c96ff44f227c9db0bedfaf091"
+  },
+  "hosted_build_runners": [
+    "ubuntu-24.04",
+    "windows-2025"
+  ],
+  "release_target": "Windows 11 x64",
+  "clean_windows11_certified": false,
+  "python_windows": {
+    "url": "https://www.python.org/ftp/python/3.14.10/python-3.14.10-amd64.zip",
+    "sha256": "cc28026a650970cc1570bb127312f1f9634eb67abfe157ae6ca1acbbc627d091",
+    "manifest_url": "https://www.python.org/ftp/python/3.14.10/windows-3.14.10.json",
+    "manifest_sha256": "47eb0a77a09048a88fae77428122c9190eff664dc14572152b249992bf9bd680"
+  },
+  "reviewed_native_runtime": {
+    "python_openssl": "OpenSSL 3.5.9 29 Sep 2026",
+    "cryptography": "50.0.2",
+    "cryptography_openssl": "OpenSSL 4.0.3 29 Sep 2026",
+    "sqlite": "3.50.4"
+  }
+}

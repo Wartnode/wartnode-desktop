@@ -1,0 +1,21 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+.gitignore text eol=lf
+.gitattributes text eol=lf
+*.py text eol=lf
+*.ps1 text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.patch text eol=lf
+*.lock text eol=lf
+*.Dockerfile text eol=lf
+*.spec text eol=lf
+*.iss text eol=lf
+*.cpp text eol=lf
+*.hpp text eol=lf
+*.manifest text eol=lf
+*.rc text eol=lf
+*.tar.gz binary
+# Preserve upstream license and copyright notice bytes.
+notices/** -text

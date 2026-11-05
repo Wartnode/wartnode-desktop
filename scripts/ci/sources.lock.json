@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "sources": [
+    {
+      "name": "upstream-core",
+      "repository": "https://github.com/warthog-network/core",
+      "commit": "f7b9dfcd4b9dfc088894c354bf9f2eacea5e19d2",
+      "archive": "vendor/sources/upstream-core.tar.gz",
+      "sha256": "cb49e52db8b92cdfc325d41c302522b14a75ac12dcac71ba4f898a2cd5deae63",
+      "tar_sha256": "c0c8dca8b17f719dd5c4fac572ba9fee495772bce28da14f4cb657284d58b356",
+      "directory": "vendor/upstream-core",
+      "tar_output": "work/upstream-core-source.tar"
+    },
+    {
+      "name": "miner",
+      "repository": "https://github.com/JohnnyB813/BRminer",
+      "commit": "87a6c85082505a0d2673a170e5fabde9a88cfbec",
+      "archive": "vendor/sources/miner.tar.gz",
+      "sha256": "a59bcc497e402eb3eb98316c3e58b633b767a1801232c7534f8ddf2949141ea4",
+      "tar_sha256": "aa3a234e7a4d7c5d6294cd1da88541a14c1476ec56266469f3fe8b766d32f9eb",
+      "directory": "vendor/brminer",
+      "tar_output": "work/miner-source.tar"
+    },
+    {
+      "name": "wallet",
+      "repository": "https://github.com/JohnnyB813/wart-dapp",
+      "commit": "772f55d99d066988927d82cd787ab17be5e6c8c9",
+      "archive": "vendor/sources/wallet.tar.gz",
+      "sha256": "2b50fcf414da60b5078ccf16ef28aa62a3c0586f443c211a850afa3011434551",
+      "tar_sha256": "9a64577abecd0d5d09440c6703182bb14a1183e8cc7836adce004498f483af15",
+      "directory": "vendor/wart_dapp",
+      "tar_output": "work/wallet-source.tar"
+    },
+    {
+      "name": "connectcoin",
+      "repository": "https://github.com/connectcoincrypto/connectcoin",
+      "commit": "ff459a92dab40607cda4d92c6effdb85600ceea7",
+      "archive": "vendor/sources/connectcoin.tar.gz",
+      "sha256": "dae633da343651acc52c65aa1d6787ec4a78d4fe8bafa74b91110b6ecddc9528",
+      "tar_sha256": "c2f39a2b46e1a8589ab4827a21ba02dd926325e3746727836083963ef32d63c7",
+      "directory": "vendor/connectcoin",
+      "tar_output": "work/connectcoin-source.tar"
+    },
+    {
+      "name": "janusminer",
+      "repository": "https://github.com/CoinFuMasterShifu/janusminer",
+      "commit": "8d13b2bad00bde6ae10195f30ba3bec8824fd1cb",
+      "archive": "vendor/sources/janusminer.tar.gz",
+      "sha256": "42044315a1c7c3bd748e19c886262bcd4364734f65bc44e97ef767be2ee56436",
+      "tar_sha256": "90784c2f525c164b0813716d2b312526436e3e516ff1b8b0527fd6e3aed5c1a3",
+      "directory": "vendor/janusminer",
+      "tar_output": "work/janusminer-source.tar"
+    }
+  ],
+  "patches": [
+    {
+      "file": "patches/official-core/0001-shutdown-order.patch",
+      "sha256": "49f61965533719b7fee55c79ff553f215cc5d3a2f214416828d4a5c56f31c596"
+    },
+    {
+      "file": "patches/official-core/0002-conman-shutdown-wakeup.patch",
+      "sha256": "c54757834d3e7222f7ce06d4709cf902b6324aac14fbb3bfb7fd0c334b317cba"
+    }
+  ]
+}

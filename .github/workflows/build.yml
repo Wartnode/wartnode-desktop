@@ -1,0 +1,154 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: development-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: Official core source build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      artifact_id: ${{ steps.native-package.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14.10'
+      - name: Verify and materialize pinned sources
+        run: python scripts/ci/bootstrap.py
+      - name: Build official core and native tests
+        run: python scripts/ci/build_node.py
+      - id: native-package
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: node-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            work/upstream-node-build/
+            provenance/node-build.json
+          retention-days: 14
+          if-no-files-found: error
+
+  windows:
+    name: Windows build, regressions and development delivery
+    needs: node
+    runs-on: windows-2025
+    timeout-minutes: 60
+    outputs:
+      delivery_id: ${{ steps.development-delivery.outputs.artifact-id }}
+      delivery_digest: ${{ steps.development-delivery.outputs.artifact-digest }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Install checksum-verified workspace Python
+        run: ./scripts/ci/bootstrap-python.ps1
+      - name: Verify and materialize pinned sources
+        run: python scripts/ci/bootstrap.py
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.node.outputs.artifact_id }}
+          merge-multiple: true
+          path: .
+      - name: Install hash-locked Python build inputs
+        run: |
+          python -m pip install --require-hashes -r scripts/ci/build-requirements.lock
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -m pip install --require-hashes --no-build-isolation -r scripts/ci/requirements.lock
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Install verified clang-cl toolchain
+        run: ./scripts/ci/install-llvm.ps1
+      - name: Rebuild all miner libraries and run CPU proof regressions
+        run: ./scripts/ci/enter-toolchain.ps1
+      - name: Prepare source-built components
+        run: python scripts/prepare-components.py
+      - name: Verify official source and approved patch
+        run: python scripts/verify-upstream-source.py
+      - name: Run app, wallet, native and extracted-package checks
+        run: python scripts/ci/run_checks.py
+      - name: Audit development source and artifacts
+        run: python scripts/ci/deliver.py
+      - name: Record qualification boundaries
+        shell: pwsh
+        run: |
+          @'
+          Windows 11 x64 is the release target. This hosted runner is Windows Server 2025.
+          App/wallet/native/frozen-helper checks ran here. Physical GPU, clean Windows 11,
+          signing, installer, update/rollback and soak certification remain release gates.
+          No additional block-discovery wait is required by this pipeline.
+          '@ | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+      - name: Upload development delivery
+        id: development-delivery
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Wartnode-Desktop-${{ github.sha }}-windows11-x64-development-attempt-${{ github.run_attempt }}
+          path: |
+            dist/*.zip
+            dist/*-setup.exe
+            dist/*.sha256
+            dist/SHA256SUMS
+            dist/delivery.json
+            provenance/build.json
+          retention-days: 14
+          if-no-files-found: error
+      - name: Upload check logs and build receipts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: checks-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            evidence/ci/
+            provenance/*build.json
+            work/ci/miner-build/Testing/Temporary/LastTest.log
+          retention-days: 14
+          if-no-files-found: warn
+
+  release-preparation:
+    name: Prepare unsigned release request
+    needs: windows
+    if: github.event_name == 'push' && github.repository == 'Wartnode/wartnode-desktop' && github.ref == 'refs/heads/main'
+    runs-on: windows-2025
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Install checksum-verified workspace Python
+        run: ./scripts/ci/bootstrap-python.ps1
+      - name: Install hash-locked verification inputs
+        run: python -m pip install --require-hashes -r scripts/ci/release-requirements.lock
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.windows.outputs.delivery_id }}
+          merge-multiple: true
+          path: work/release-input
+      - name: Bind exact unsigned files and source to this passing build
+        env:
+          DELIVERY_ARTIFACT_ID: ${{ needs.windows.outputs.delivery_id }}
+          DELIVERY_ARTIFACT_DIGEST: ${{ needs.windows.outputs.delivery_digest }}
+        run: python scripts/prepare-release.py --directory work/release-input/dist --out work/release-prepared
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-preparation-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: work/release-prepared/
+          retention-days: 90
+          if-no-files-found: error
+      - name: Record local signing boundary
+        shell: pwsh
+        run: |
+          'Prepared files are unsigned. The Windows PC independently checks the completed push run, exact artifact IDs/digests and file hashes before local DPAPI-protected signing. No release or tag was published; production update discovery remains disabled.' | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
