@@ -37,6 +37,7 @@ if __name__ == '__main__':
         ('application-tests', [sys.executable, 'scripts/run-tests.py']),
         ('wallet-tests', [sys.executable, 'scripts/run-tests.py', '--legacy']),
         ('node-native-tests', [sys.executable, 'scripts/test-native.py']),
+        ('dashboard-layout', [sys.executable, 'scripts/qualify-dashboard-ui.py']),
         ('package', [powershell, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
                      'scripts/package.ps1', '-PythonExecutable', sys.executable]),
         ('extract', [sys.executable, 'scripts/extract-package.py']),

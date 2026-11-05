@@ -8,6 +8,7 @@ import time
 import zipfile
 from wartnode import updates,release
 from wartnode.paths import atomic_json
+from wartnode.preflight import MINIMUM_WINDOWS_BUILD
 from .keys import public_record
 
 
@@ -114,7 +115,7 @@ def sign(directory,keys,ci):
     now=int(time.time());version=delivery['application'];asset=artifacts['portable']
     update={'schema':1,'application':'wartnode','channel':request['channel'],'platform':'windows-x64',
             'version':version,'data_schema':updates.DATA_SCHEMA,'rollback_schema':updates.DATA_SCHEMA,
-            'minimum_windows_build':26100,'issued':now,'expires':now+14*86400,'files':package['files'],
+            'minimum_windows_build':MINIMUM_WINDOWS_BUILD,'issued':now,'expires':now+14*86400,'files':package['files'],
             'asset':{'url':f'https://github.com/{release.REPOSITORY}/releases/download/v{version}/{asset["name"]}',
                      'size':asset['size'],'sha256':asset['sha256']}}
     raw=release.canonical(update)
@@ -126,7 +127,7 @@ def sign(directory,keys,ci):
     payload={'schema':1,'application':'wartnode','repository':release.REPOSITORY,
         'key_id':public_record(keys)['keys']['release']['key_id'],'version':version,'channel':request['channel'],
         'platform':'windows-x64','data_schema':updates.DATA_SCHEMA,'rollback_schema':updates.DATA_SCHEMA,
-        'minimum_windows_build':26100,'purpose':release.release_purpose(delivery['application'], package['trust']['channel']),'production_release':False,'source_commit':delivery['commit'],
+        'minimum_windows_build':MINIMUM_WINDOWS_BUILD,'purpose':release.release_purpose(delivery['application'], package['trust']['channel']),'production_release':False,'source_commit':delivery['commit'],
         'issued':now,'expires':now+14*86400,'artifacts':artifacts,'ci':ci,
         'update_manifest':descriptor(root/'update-envelope.json')}
     raw=release.canonical(payload)

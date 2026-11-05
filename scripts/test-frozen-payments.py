@@ -47,7 +47,8 @@ try:
     with tempfile.TemporaryDirectory(prefix='frozen-payments-',dir=root/'work') as directory:
         client=Client(directory)
         try:
-            client.call('import',kind='private',secret='00'*31+'01',password='synthetic-package-password')
+            client.call('setup',password='synthetic-package-password')
+            client.call('import',kind='private',secret='00'*31+'01',label='Main')
             review=client.call('review',recipient=OTHER,amount='1.25000000')
             assert review['fee']==9992 and review['total']==125009992
             assert client.call('send',token=review['token'],password='synthetic-package-password')['status']=='pending'

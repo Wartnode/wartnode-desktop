@@ -19,11 +19,12 @@ import zipfile
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from .paths import asset_root, atomic_json
+from .preflight import MINIMUM_WINDOWS_BUILD, current_windows_build
 
 MAX_ENVELOPE = 1024*1024
 MAX_ARCHIVE = 256*1024*1024
 MAX_EXPANDED = 512*1024*1024
-DATA_SCHEMA = 3  # Settlement safety plus explicit mode and manual-start behavior.
+DATA_SCHEMA = 4  # Fresh shared-password profiles; no legacy wallet conversion.
 HEX = re.compile(r'[0-9a-f]{64}\Z')
 VERSION = re.compile(r'(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(dev|beta|rc)\.([1-9]\d*))?\Z')
 
@@ -60,6 +61,27 @@ def configured(trust):
     return bool(trust.get('enabled',True) and trust.get('public_key') and trust.get('manifest_url'))
 
 
+def channels(trust):
+    """Only publisher-configured feeds can appear in the channel picker."""
+    feeds=trust.get('channels')
+    if feeds is None:return {trust.get('channel','development'):trust}
+    if not isinstance(feeds,dict) or not feeds or set(feeds)-{'beta','stable'}:
+        raise ValueError('Invalid configured update channels')
+    result={}
+    for name,feed in feeds.items():
+        if not isinstance(feed,dict) or feed.get('channel')!=name:
+            raise ValueError('Invalid configured update channel')
+        result[name]=feed
+    return result
+
+
+def channel_policy(trust,requested):
+    feeds=channels(trust)
+    if len(feeds)==1:return next(iter(feeds.values()))
+    if requested not in feeds:raise ValueError('This update channel is not configured')
+    return feeds[requested]
+
+
 def https_url(url, origin=None):
     parsed = urlsplit(url)
     if (parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password
@@ -92,7 +114,7 @@ def safe_name(value):
     return path
 
 
-def verify_envelope(envelope, trust, current, *, now=None, build=26100, highest=None):
+def verify_envelope(envelope, trust, current, *, now=None, build=None, highest=None):
     if not (trust.get('public_key') and trust.get('manifest_url')):
         raise ValueError('Updates are not configured for this development build')
     https_url(trust['manifest_url'])
@@ -117,7 +139,9 @@ def verify_envelope(envelope, trust, current, *, now=None, build=26100, highest=
             or payload['issued']>timestamp+300 or payload['expires']<=timestamp
             or payload['expires']<=payload['issued'] or payload['expires']-payload['issued']>31*86400):
         raise ValueError('The update information has expired or its date is invalid')
-    if type(payload.get('minimum_windows_build')) is not int or not 26100<=payload['minimum_windows_build']<=build:
+    if build is None:build=current_windows_build()
+    if (type(build) is not int or type(payload.get('minimum_windows_build')) is not int
+            or not MINIMUM_WINDOWS_BUILD<=payload['minimum_windows_build']<=build):
         raise ValueError('This update needs a newer Windows 11 version')
     if version_key(payload.get('version'))<=max(version_key(current),version_key(highest or current)):
         raise ValueError('This update version has already been used or is older than the installed version')
@@ -202,7 +226,7 @@ def download(url, destination, limit, expected_size=None, *, budget=300):
         raise
 
 
-def discover(trust,current,highest=None,build=26100):
+def discover(trust,current,highest=None,build=None):
     if not configured(trust):
         raise ValueError('Updates are not configured for this development build')
     import tempfile
@@ -294,12 +318,12 @@ def install_lock(root):
 def active(root,allow_legacy=False):
     value=read_json(Path(root)/'active.json')
     version_key(value['version'])
-    if value.get('data_schema')!=DATA_SCHEMA and not (allow_legacy and value.get('data_schema') in (1,2)):
+    if value.get('data_schema')!=DATA_SCHEMA and not (allow_legacy and value.get('data_schema') in (1,2,3)):
         raise ValueError('The installed version uses an incompatible data format')
     return value
 
 
-def prepare(root,envelope,trust,current,archive=None,build=26100):
+def prepare(root,envelope,trust,current,archive=None,build=None):
     staging=Path(root).resolve()/'staging'
     staging.mkdir(exist_ok=True)
     if staging.is_symlink() or staging.is_junction():raise ValueError('The update staging folder is a link')
@@ -307,7 +331,7 @@ def prepare(root,envelope,trust,current,archive=None,build=26100):
         return _prepare(root,envelope,trust,current,archive,build)
 
 
-def _prepare(root,envelope,trust,current,archive=None,build=26100):
+def _prepare(root,envelope,trust,current,archive=None,build=None):
     """Stage only; the launcher activates this request after the UI exits."""
     root=Path(root).resolve()
     if (root/'update-request.json').exists():raise ValueError('An update is already staged. Restart WartNode to finish it.')
@@ -328,7 +352,7 @@ def _prepare(root,envelope,trust,current,archive=None,build=26100):
         archive=downloaded
     stage_archive(archive,request/'app',payload)
     atomic_json(request/'app/release-envelope.json',envelope)
-    atomic_json(root/'update-request.json',{'directory':request.name,'from':current})
+    atomic_json(root/'update-request.json',{'directory':request.name,'from':current,'channel':trust['channel']})
     return payload
 
 
@@ -374,11 +398,15 @@ def recover(root,checkpoint=lambda _:None):
     return value
 
 
-def activate_request(root,trust,build=26100,checkpoint=lambda _:None):
+def activate_request(root,trust,build=None,checkpoint=lambda _:None):
     root=Path(root).resolve()
     request_file=root/'update-request.json'
     if not request_file.exists():return None
     request=read_json(request_file)
+    feeds=channels(trust)
+    channel=request.get('channel',trust.get('channel'))
+    if channel not in feeds:raise ValueError('The staged update channel is not configured')
+    trust=feeds[channel]
     if not re.fullmatch('[0-9a-f]{32}',str(request.get('directory'))):
         raise ValueError('Invalid staged update location')
     folder=root/'staging'/request['directory']/'app'
@@ -426,6 +454,17 @@ def confirm_health(root,journal):
     try:cleanup_staging(root)
     except (OSError,ValueError):pass  # Cleanup can retry; a healthy app must stay open.
     return True
+
+
+def rollback_available(root):
+    if not root:return False
+    try:
+        journal=read_json(Path(root)/'update-journal.json')
+        previous=journal['previous'];version_key(previous['version'])
+        return (journal.get('phase')=='complete' and journal.get('data_schema')==DATA_SCHEMA
+                and previous.get('data_schema')==DATA_SCHEMA
+                and (Path(root)/'versions'/previous['version']/'WartNode.exe').is_file())
+    except (OSError,ValueError,KeyError,TypeError):return False
 
 
 def rollback(root,checkpoint=lambda _:None):

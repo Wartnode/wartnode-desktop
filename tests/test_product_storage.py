@@ -11,10 +11,12 @@ from wartnode.processes import Runtime
 
 class ProductStorageTests(unittest.TestCase):
     def test_windows_preflight_rejects_old_arm_and_server(self):
-        for build,arch,workstation in ((19045,'AMD64',True),(22631,'AMD64',True),
+        for build,arch,workstation in ((19045,'AMD64',True),(21999,'AMD64',True),
                                      (26100,'ARM64',True),(26100,'AMD64',False)):
             self.assertFalse(windows_compatibility(build,arch,workstation)['supported'])
-        self.assertTrue(windows_compatibility(26100,'AMD64',True)['supported'])
+        for build in (22000,22621,22631,26100,26200,26300,28000):
+            with self.subTest(build=build):
+                self.assertTrue(windows_compatibility(build,'AMD64',True)['supported'])
 
     def test_settings_replace_failure_preserves_previous_value_and_cleans_temp(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -79,6 +79,9 @@ target_link_libraries(warthog-native-batch-tests PRIVATE warthog_native_batch ja
 add_test(NAME warthog-native-batch-tests COMMAND warthog-native-batch-tests)
 add_executable(mining-budget-tests "{native.as_posix()}/mining_budget_tests.cpp")
 add_test(NAME mining-budget-tests COMMAND mining-budget-tests)
+add_executable(miner-telemetry-tests "{native.as_posix()}/miner_telemetry_tests.cpp")
+target_link_libraries(miner-telemetry-tests PRIVATE warthog_mining ws2_32 advapi32)
+add_test(NAME miner-telemetry-tests COMMAND miner-telemetry-tests)
 '''
     (adapter / 'CMakeLists.txt').write_text(header + prefix + tail)
     subprocess.run([cmake, '-S', str(adapter), '-B', str(output), '-G', 'Ninja',

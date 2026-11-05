@@ -57,9 +57,9 @@ class Explorer:
 
     def ingest(self, block):
         height,header,body=block.get('height'),block.get('header'),block.get('body')
-        if (type(height) is not int or height<1 or not isinstance(header,dict) or not isinstance(body,dict)
+        if (type(height) is not int or not 1<=height<=0xffffffff or not isinstance(header,dict) or not isinstance(body,dict)
                 or not HEX64.fullmatch(str(header.get('hash',''))) or not HEX64.fullmatch(str(header.get('prevHash','')))
-                or type(header.get('timestamp')) is not int):raise NodeError('Invalid block response')
+                or type(header.get('timestamp')) is not int or not 0<=header['timestamp']<=0xffffffff):raise NodeError('Invalid block response')
         for field in ('rewards','transfers'):
             if not isinstance(body.get(field),list) or len(body[field])>10000:raise NodeError('Invalid block transactions')
             for position,tx in enumerate(body[field]):transaction_row(tx,height,position)
@@ -115,6 +115,17 @@ class Explorer:
 
     def recent(self, limit=30):
         return [dict(row) for row in self.con.execute('SELECT height,hash,timestamp FROM blocks ORDER BY height DESC LIMIT ?',(min(100,limit),))]
+
+    def recent_details(self,limit=25):
+        from .compat import wallet_utils as crypto
+        result=[]
+        for row in self.recent(min(25,limit)):
+            block=self._block(row['height'])
+            rewards=block['body']['rewards'];transfers=block['body']['transfers']
+            result.append(dict(row,transactions=len(rewards)+len(transfers),
+                miner=', '.join(r['toAddress'] for r in rewards),
+                reward=sum(crypto.parse_e8(r['amount'],allow_zero=True) for r in rewards)))
+        return result
 
     def _block(self, identifier):
         row=self.con.execute('SELECT height,payload FROM blocks WHERE '+('height=?' if type(identifier) is int else 'hash=?'),(identifier,)).fetchone()

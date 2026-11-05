@@ -9,6 +9,7 @@ import unittest
 root=Path(__file__).resolve().parents[1]
 parser=argparse.ArgumentParser()
 parser.add_argument('--legacy',action='store_true')
+parser.add_argument('--pattern',default='test*.py',help='unittest discovery filename pattern')
 args=parser.parse_args()
 temp=root/'work/test-tmp'
 temp.mkdir(parents=True,exist_ok=True)
@@ -20,6 +21,6 @@ target=root/'vendor/wart_dapp' if args.legacy else root
 os.chdir(target)
 sys.path.insert(0,str(target))
 sys.path.insert(0,str(target/'tests'))
-suite=unittest.defaultTestLoader.discover(str(target/'tests'))
+suite=unittest.defaultTestLoader.discover(str(target/'tests'),pattern=args.pattern)
 result=unittest.TextTestRunner(verbosity=2).run(suite)
 raise SystemExit(not result.wasSuccessful())

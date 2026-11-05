@@ -1,50 +1,82 @@
-# 0.4.0-beta.1
+# 0.5.0-beta.1
 
-The first public beta provides a local wallet and explorer, explicit local node
-initialization with optional chain-file import, Lite access through
-`mainnet.wartnode.com`, and local-node-only solo mining through driver OpenCL.
-The CPU VerusHash stage retains the clang-cl build. There is no CPU-only mode,
-external pool option or mining fee.
+This beta introduces the Dashboard layout across Overview, Node, Wallet, Mine,
+Explorer and Settings. Wallets use a fresh shared-password profile with labeled
+addresses, an address book and complete encrypted profile backups. Overview shows
+one current connection status, combined funds, mining performance and network
+statistics. Difficulty uses GH/TH.
 
-## Scope
+## Changes
 
-The owner approved publishing this beta while deferring additional physical
-GPU/driver qualification, the remaining Windows/accessibility matrix and the
-72-hour integrated hardware soak. These checks are deferred, not passed. They
-remain requirements for broader stable-release claims.
+- Full/Lite selection and detailed node statistics are on Node; logs open separately.
+- Mining centers on hashrate charts, supported CPU/GPU readings, session counters
+  and canonical rewards for the selected payout address across sessions. Settings
+  and the console open in separate windows. Missing sensors and partial history
+  are labeled.
+- Presets are Eco 30%, Balanced 60% and Heavy 90%; Custom supports independent
+  CPU/GPU ceilings from 5% to 95%. Existing saved limits retain their effective
+  values as Custom.
+- Explorer rolls the latest 25 blocks, supports Pause/Resume, and opens wartnode.com
+  from its website button or a double-clicked height.
+- General, Security, Storage, Updates and About provide working preferences,
+  including installed-only startup, tray behavior, appearance, start page,
+  balance privacy and configurable automatic lock.
+- The wallet fee and managed node minimum are 0.00009992 WART.
+- All Windows 11 x64 releases are targeted, starting at build 22000. Per-release
+  OS certification is not claimed or required; see [compatibility](WINDOWS_COMPATIBILITY.md).
 
-The development baseline passed clean Windows 11 Pro VM functional checks,
-wallet/payment recovery, node initialization and standalone chain import,
-Lite/explorer behavior, installed update/rollback/repair, standard-user isolation,
-Defender scanning and native 100%/150% display review. The full VM baseline was
-26H2 build 26300.9457; post-update data/launcher/signature recovery checks passed
-on 26300.9711. Those results describe the development baseline, not a new clean
-Windows certification of every beta build. The beta's exact source and artifacts
-are bound to its GitHub Actions run and signed manifests.
+## Upgrade from 0.4.0-beta.1
+
+The new data contract requires a **fresh profile**. Preserve your original backup
+and export recovery phrases/private keys using the old application before
+upgrading. The new app leaves old-format wallet databases untouched and asks you
+to choose a fresh folder. Import addresses manually, verify them, and make a new
+.wartprofile backup. Automatic migration and legacy backup import are not provided.
+Binary rollback to an incompatible data format remains blocked. See the
+[user guide](MVP_GUIDE.md) for backup and recovery details.
+
+## Qualification and beta scope
+
+The Dashboard development baseline passed the application/wallet/native suites,
+Windows 11 host installation and recovery, a two-address frozen-profile backup/
+restore/password-change flow in a Windows 11 guest, actual node fee/shutdown checks,
+and physical 30/60/90 and independent Custom mining limits on Ryzen 7 5800X / RTX
+4060. The exact public beta source and artifacts are bound to its public GitHub
+Actions run and signed manifests; development-baseline results retain their
+original scope and are not relabeled as fresh OS certification of every build.
+
+As for the previous public beta, wider CPU/GPU/driver testing, remaining physical
+display/accessibility coverage and the 72-hour integrated soak are deferred. They
+are not marked passed and remain requirements for broader stable-release claims.
 
 ## Known limits
 
-- Windows 11 x64 24H2 or later is required; the complete edition/build and
-  hardware matrix has not been qualified.
-- Earlier physical mining work covered Ryzen 7 5800X and RTX 4060. Broader
-  CPU/GPU/driver combinations and extended load/thermal behavior are deferred.
-- Actual 200% display scaling and full human keyboard/Narrator review remain
-  unqualified. Geometry regressions do not replace those checks.
-- Full genesis replay and remaining physical power/storage failure and
-  reference-node propagation coverage are not certified by this beta.
-- The installer is not Authenticode signed. Project signatures authenticate
-  release files but do not give them Windows publisher reputation.
-- Automatic update discovery is disabled. Upgrade using the installer from this
-  repository's Releases page.
-- Lite mode depends on hosted data and does not independently validate the chain.
-  Mining is available only through the managed local node.
-- Imported chain files require a trusted source. Structural and integrity checks
-  do not independently validate every historical block.
+- Windows 10, Windows Server, ARM and 32-bit Windows are outside the target.
+  Earlier Windows 11 feature releases have not all been executed individually.
+- Mining requires a supported CPU and GPU together, driver OpenCL and the managed
+  local node. There is no CPU-only mode, external pool option or developer fee.
+- CPU temperature/power are unavailable. Ambiguous identical GPU models may have
+  unavailable sensors instead of readings assigned to the wrong device.
+- Accepted miner work is separate from chain-confirmed rewards. Reward totals
+  remain partial until address-history coverage is complete.
+- Qt layout checks at logical 100/150/200% sizes do not certify physical Windows
+  200% scaling, a full human keyboard/Narrator review or multi-monitor transitions.
+- Full genesis replay and remaining physical power/storage failure and reference-
+  node propagation coverage are not certified by this beta.
+- Windows Authenticode is absent. Project signatures authenticate release files
+  without establishing Microsoft publisher identity or reputation.
+- Automatic update discovery stays disabled. Use this repository's Releases page
+  for manual installer upgrades.
+- Lite relies on hosted data and does not independently validate the chain.
+  Imported chain files require a trusted source; structural checks do not replay
+  every historical block.
 
 ## Reporting a problem
 
-Include the beta version, Windows build, connection mode, reproduction steps and
-redacted diagnostics. For mining reports, include the CPU, GPU and driver
-version. Keep recovery words, passwords, private keys and wallet files out of
-reports. Collected internal test data and VM files are not published in this
-repository or the matching source ZIP.
+Include the app version, Windows build, connection mode, reproduction steps and
+redacted diagnostics. For mining, include CPU/GPU/driver versions. Keep passwords,
+recovery words, private keys, addresses and wallet files out of public reports.
+Collected qualification data, VM files and private development history are not
+included in the public repository or matching source archive.
+
+[Previous beta notes](https://github.com/Wartnode/wartnode-desktop/blob/v0.4.0-beta.1/docs/BETA.md)

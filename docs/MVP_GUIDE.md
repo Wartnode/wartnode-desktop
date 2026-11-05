@@ -1,69 +1,61 @@
 # Wartnode-Desktop quick start
 
-Run the **Wartnode-Desktop setup** installer, then open Wartnode-Desktop from the Start menu. Installation is per user and does not need administrator access. Windows 11 x64, version 24H2 or later (build 26100 or newer), is required. ARM and Windows Server are not supported. This beta is not Windows Authenticode signed; verify its accompanying project-signed manifests. You do not need Python, Git, Docker or a CUDA Toolkit.
+Install Wartnode-Desktop per user on Windows 11 x64, starting with 21H2/build 22000. ARM and Windows Server are unsupported. This beta has no Authenticode signature; project release signatures are verified separately. You do not need Python, Git, Docker, or a CUDA Toolkit. For the portable ZIP, extract the whole folder and run WartNode.exe with its helper and _internal folder beside it.
 
-The portable ZIP is also available: extract the full folder and open **WartNode.exe**. Keep `_internal` and `WartNodeHelper.exe` beside it. In-app updates require the installed version.
+[Windows compatibility policy and measured coverage](WINDOWS_COMPATIBILITY.md) distinguish the supported Windows 11 family from the specific builds tested.
 
-If security software quarantines a file, keep the report for troubleshooting. Do not disable protection or add an exclusion to run Wartnode-Desktop.
+## Profile and addresses
 
-## Wallet and node
+Opening the app starts neither the node nor the miner. On first use, set one profile password of at least eight characters. It protects every address you create or import. Unlock once to manage addresses or send payments. Each new address has its own 24 recovery words; store these offline and check imported addresses against your original records.
 
-Opening the app never starts a node or mining. You can create, import or restore a wallet immediately.
+Wallet → My addresses provides labels, a default address, copy/receive actions, and a mining payout shortcut. Wallet → Address book stores labeled recipients. Public addresses, QR codes, recorded activity, and last-known balances remain viewable while the profile is locked. Available WART combines all unique owned addresses after pending/uncertain payment reservations; an incomplete refresh never appears as a complete total.
 
-Choose **Node → Initialize node…** to select an empty blockchain folder and either **Sync from genesis** or **Import chain database**. Import accepts a standalone SQLite chain database from a cleanly stopped compatible node or a SQLite backup. Choose the file, check its detected height, and confirm that you trust its source. The app checks the format, chain anchor and integrity, then copies it with progress and cancellation. These checks do not independently validate all imported history. The original file and wallet records are kept. Allow room for the database plus 1 GiB of headroom; a full chain needs more space as it grows. Select **Start node** after initialization to sync or catch up.
+This version uses a new profile format. It leaves old-format wallet databases untouched and asks you to select a fresh folder. There is no automated wallet migration or old backup importer. Export your recovery phrases/private keys with the original application and import them manually into the fresh profile. Verify every address before receiving funds. The default launch remembers the selected fresh folder; an explicit --data-dir continues to select that folder directly.
 
-For a wallet without local chain storage, choose **Settings → Connection → Lite wallet**, then **Apply connection**. Lite connects over HTTPS to **mainnet.wartnode.com** and uses the Wartnode explorer service for transaction discovery. Your keys and signing stay on this computer. The services can see queried public addresses and supply balances, fees and confirmations; this mode does not independently validate the chain. Solo mining is unavailable. Changing connections locks the wallet and requires a fresh payment review. No connection changes happen automatically after a service failure.
+Wallet → Back up profile saves a .wartprofile file encrypted with the current profile password. It includes all addresses, labels, contacts, and durable payment state. Restore into an empty profile and unlock with the password used for that backup. Settings → Security can change the profile password; make a new backup afterwards. Older backups continue to use their original password. Machine preferences are separate; public activity is rediscovered from the selected node after restoration.
 
-Wallets, payment history, settings and backups stay in `%LOCALAPPDATA%\WartNode` by default. Only blockchain storage moves. Under **Settings → Storage**, stop the node and miner, then choose **Change blockchain folder…** and select an empty local folder. Keep the app open while it moves data. An interrupted move resumes before the node starts. The node stops if free space falls below 512 MiB; free space and restart it.
+## Payments
 
-If settings become unreadable, Wartnode-Desktop offers **Restore previous settings** or **Reset setup** and keeps the original file. Resetting uses the default blockchain folder and does not remove existing chain files. Encrypted wallet backups protect wallet records; contacts and preferences are stored separately in the settings file.
+Choose Send, select an owned address, enter a recipient (or choose a contact), and review the recipient, amount, fee, and total before confirming. The selected transaction fee is **0.00009992 WART**. Send Max deducts that fee and funds reserved for other payments. A selected backend requiring a higher fee is refused with an explanation rather than silently increasing the fee.
 
-Open **Wallet** to create a wallet, import a private key or Warthog Desktop recovery phrase, or restore a backup. You can do this while the node syncs. Check that an imported wallet's address matches the address you used before.
+A submitted payment still needs confirmation. Pending and uncertain payments keep their funds reserved; check Wallet → Activity before sending again. Wartnode-Desktop never retries a payment automatically. Payment review explicitly reveals amounts even when Hide balances is enabled so spending can be authorized accurately.
 
-Write down a new wallet's 24 recovery words and store them offline. Anyone with the phrase can access the wallet. Use **Back up** to save an encrypted backup. Keep the backup password and the original wallet passwords; both are needed to restore and unlock the wallets.
+## Full node or Lite
 
-Some older Warthog Desktop phrases fail the current checksum check. Wartnode-Desktop asks before importing one. Keep the spelling and spacing exactly as entered in the original wallet, and check the address afterward. **Restore backup** also accepts an older wallet database and keeps the original file.
+Choose the connection on **Node**, then Apply connection. Full node uses the managed local node. Initialize node selects an empty chain folder and either syncs from genesis or imports a standalone chain database from a cleanly stopped compatible node or SQLite backup. Import checks format, chain anchor, and integrity, copies with progress/cancellation, and keeps the original. These checks do not independently validate all imported history. Select Start node explicitly afterwards. The managed node minimum fee is **0.00009992 WART**.
 
-Use **Receive** to copy your address or show its QR code. Under **Send**, choose **Review payment** to check the recipient, amount, fee and total before entering your wallet password. **Send Max** deducts the fee and funds reserved for other payments.
+Lite uses HTTPS mainnet.wartnode.com and the Wartnode explorer service. Keys and signing stay on this computer. The services can see public addresses you query and supply balances, fees, and confirmations; Lite does not independently validate the chain and cannot solo mine. Switching locks the profile, stops managed mining/node work, and invalidates payment reviews. Failures never cause an automatic connection switch.
 
-Use **Save contact…** to keep a recipient address. **Choose contact…** fills the recipient field; always check the full address during payment review. **Payments** shows outgoing payments. **View activity and rewards** opens incoming transfers and mining rewards in Explorer.
+Node shows height, peers, uptime, storage, and available process resources. Node log opens separately. Network statistics on Overview use the selected connection, label estimates and stale data, and display difficulty in GH or TH with the exact value in a tooltip.
 
-A submitted payment still needs a block confirmation. If submission is uncertain, check **Payments** before sending again. Funds stay reserved while the result is uncertain. Wartnode-Desktop does not retry payments automatically.
+## Mining
 
-## Solo mining
+The miner uses GPU + CPU through driver OpenCL. Choose **Eco 30%**, **Balanced 60%** (default), or **Heavy 90%**. Preset buttons open the settings popup for review. Custom allows independent CPU/GPU ceilings from 5% to 95%. Save applies an idle configuration; Apply and restart stops a running miner before applying reviewed changes. Cancel discards pending edits. Old preset preferences retain their original effective limits as Custom.
 
-Mining uses a GPU and CPU together. Select a mode, GPU and payout address, then choose **Start mining**. **Normal** is the default, with CPU and GPU limits of 50%. **Light** sets both to 20%; **Heavy** sets both to 80%. Override either percentage from 5% to 95% to use **Custom**. Changes are saved; stop mining before changing limits. CPU limits cover the miner process, including its GPU driver work. GPU limits pace mining activity. Actual usage may be lower when one stage waits for the other; these settings do not limit other apps or node synchronization. A graphics driver with OpenCL support is required. Wartnode-Desktop does not change your clocks, voltages or drivers.
+CPU quotas cover the entire miner process, including GPU driver work. GPU pacing covers this miner's scans. Actual usage can be lower when one stage waits for the other. The app does not change clocks, voltages, drivers, or other applications. It has no CPU-only, remote pool, or developer-fee mode.
 
-The included miner works only with Wartnode-Desktop's local node and charges no developer fee. It has no CPU-only mode or external pool option. Hardware testing so far covers a Ryzen 7 5800X and RTX 4060; other combinations still need testing.
+Mine emphasizes Janus/GPU SHA/CPU Verus rates, bounded history charts, session counters, uptime, and supported telemetry. Missing/stale sensors show unavailable. CPU temperature/power are unavailable on this build. On ambiguous identical GPUs, sensor readings stay unavailable instead of being assigned to the wrong card. The mining console opens separately.
 
-Janus is the combined mining rate. GPU SHA and CPU Verus show individual stages. Accepted work is not a mining reward; a reward must appear in a confirmed block.
+Blocks mined by payout address persists public reward occurrences across app sessions, including an external payout address. Rewards are checked against canonical blocks and marked confirmed, orphaned, or unverified. Totals say Partial history until address-history loading is complete; session accepted-work counters are separate from confirmed rewards. Clearing Explorer's cache keeps this reward store. Hardware qualification currently covers Ryzen 7 5800X / RTX 4060; other configurations require testing.
 
-## Explorer and recovery
+## Explorer
 
-Search **Explorer** by block height, block hash, transaction hash or address. Use **Older results** for the next page. Different transfers can share a transaction hash, so check the sender and recipient. If the chain changes during a search, search again.
+Explorer shows the latest 25 blocks, newest first. New blocks preserve the selected block and scroll position. Pause stops the displayed list from moving; Resume catches up. Search height, block/transaction hash, or address. Older results continues a search page. Different transfers can share a transaction hash, so check the full occurrence.
 
-Double-click a height, address or transaction hash in a result table to open its details.
+The wartnode.com button opens the mainnet explorer. Double-click a height to open its block there; select a row for in-app details. Keyboard users can use Open selected height on wartnode.com. Hosted/offline/incomplete results identify their scope. Reorganizations require a fresh search.
 
-Older records load from the selected node. Lite transaction searches also use the hosted explorer and show when coverage is incomplete. The explorer keeps a small cache of recent blocks rather than building another index of the whole chain. The cache is limited to 128 blocks, 16 MiB of compressed data and a 32 MiB database. Temporary files and old-cache migration can need extra disk space. Full node mode still stores the full blockchain; Lite does not create a local chain database.
+The disposable cache is bounded to 128 blocks, 16 MiB compressed payload, and a 32 MiB database. It does not build a second full-chain index. Lite needs no local chain storage. Settings → Storage → Clear explorer cache preserves profiles, payment reservations, reward history, labels, and node data.
 
-**Settings → Clear explorer cache** removes cached blocks while keeping wallets, payment history and node data. Offline results show only what is cached.
+## Preferences and recovery
 
-**Node** shows sync progress, peers and logs. **Resync blockchain…** stops the node and miner and backs up the existing chain files. Start the node afterward to download the chain again. Wallets and payment history are kept. An interrupted backup resumes the next time the node starts.
+Settings uses General, Security, Storage, Updates, and About categories. Launch at Windows startup is an installed-only, per-user opt-in that opens the desktop without starting a node/miner. Close to system tray defaults on and locks the profile; turn it off for orderly Exit on close. If the tray is unavailable, close exits. Start page applies on the next launch. Dark/System follows Windows appearance, with native contrast handling.
 
-Logs follow new entries by default. Scroll up to pause following; return to the bottom to resume. The screen shows the latest 250 lines. Recent log files are also kept in the data folder.
+Automatic lock supports 5 minutes, 15 minutes (fresh default), 1 hour, or Never. Explicit locking, Windows lock/disconnect/logoff, closing, and mode changes always lock. Hide balances masks amounts in profile views, activity, rewards, and Explorer without changing accounting.
 
-## Closing and support
+Storage shows the actual active profile folder and opens it in the file manager. Blockchain moves require stopped mining/node, an empty separate local folder, and free-space headroom. Interrupted moves resume. Resync on Node backs up chain files before a fresh sync. Low disk stops mining and the node; free space before restarting. Profile/payment data stay in the profile folder.
 
-Closing the window locks the wallet and leaves Wartnode-Desktop running in the tray. Choose **Exit Wartnode-Desktop** to stop the app, node and miner. The wallet also locks with Windows and after inactivity. Startup with Windows and automatic mining are not available.
+Unreadable settings offer Restore previous settings or Reset setup, preserving the original file and wallet/chain data. Reset uses the default chain folder, so retain the original storage location. Logs keep the latest 250 lines, with follow/filter/copy/export controls in separate popups.
 
-**Settings → About** shows local connection ports. **Export diagnostics…** saves version, OS, CPU/GPU, storage and node-status information without wallet keys, passwords, addresses, transaction data, raw logs or personal folder paths. **Component details** shows bundled versions, source revisions and file hashes.
+Updates preserve authenticated downloads, file verification, version/replay checks, staged explicit installation/restart, and compatible rollback. Automatic checking never installs or restarts. Channel choices appear only for actual configured signed feeds. This beta has discovery disabled and a read-only Beta channel. The new data contract prevents rollback to pre-profile versions; no incompatible wallet converter is run.
 
-## Installation, updates and recovery
-
-Back up your wallets before changing versions. Use **Exit Wartnode-Desktop** before running an installer to upgrade or repair it. Running the same installer repairs application files. Uninstall keeps wallet data, payment history and custom blockchain storage; reinstall to use them again.
-
-**Settings → Updates** provides an explicit check and **Update and restart…** when publisher settings are configured. This first beta leaves automatic discovery disabled. Upgrade using the installer from https://github.com/Wartnode/wartnode-desktop/releases. Do not replace those settings with a key supplied by a download.
-
-Configured updates verify the publisher signature, version, Windows/data compatibility and every file before stopping the node and miner. The previous compatible application is retained. The 0.4 connection and startup contract prevents rollback to the 0.3 series, which ignores Lite settings. Failed or interrupted startup returns to it. **Return to previous version…** is available after a compatible upgrade. Wallets and pending or uncertain payments remain in the data folder.
-
-An older installer is rejected when a newer version is installed. Do not manually downgrade across incompatible wallet, node or cache formats. Incompatible data changes require a matching backup and a separately qualified migration; this updater accepts only the current data contract.
+Exit Wartnode-Desktop stops owned processes. About shows version/components and privacy-filtered diagnostics, excluding keys, passwords, addresses, contacts, transactions, raw logs, and personal paths. Uninstall keeps profile and chain data and removes this installation's startup registration. Reinstall a compatible version to use the profile again.

@@ -10,8 +10,10 @@ $env:PATH = @((Split-Path -Parent $PythonExecutable),$basePython,(Join-Path $env
 $compilerPath = & "$PSScriptRoot\ci\install-inno.ps1"
 & $PythonExecutable -m PyInstaller --noconfirm --clean Launcher.spec *> work/launcher-build.log
 if ($LASTEXITCODE) { Get-Content work/launcher-build.log -Tail 20; throw 'Launcher build failed' }
+$minimumWindowsBuild = & $PythonExecutable -c 'from wartnode.preflight import MINIMUM_WINDOWS_BUILD; print(MINIMUM_WINDOWS_BUILD)'
+if ($LASTEXITCODE -or $minimumWindowsBuild -notmatch '^\d+$') { throw 'Invalid Windows compatibility policy' }
 $numericVersion = ($Version -replace '-(dev|beta|rc)\.', '.')
-& $compilerPath ("/DAppVersion="+$Version) ("/DFileVersion="+$numericVersion) ("/DBundleDir="+$BundleDir) 'packaging/windows/wartnode.iss' *> work/installer-build.log
+& $compilerPath ("/DAppVersion="+$Version) ("/DFileVersion="+$numericVersion) ("/DMinimumWindowsBuild="+$minimumWindowsBuild) ("/DBundleDir="+$BundleDir) 'packaging/windows/wartnode.iss' *> work/installer-build.log
 if ($LASTEXITCODE) { Get-Content work/installer-build.log -Tail 25; throw 'Installer build failed' }
 $installerPath = Join-Path $projectPath ('dist\Wartnode-Desktop-'+$Version+'-windows-x64-setup.exe')
 $digest = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash.ToLower()

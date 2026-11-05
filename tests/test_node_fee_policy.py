@@ -1,4 +1,4 @@
-"""The production launcher must preserve the official node's admission policy."""
+"""Qualify the explicitly selected fee through the real managed node launcher."""
 from pathlib import Path
 import socket
 import sys
@@ -14,7 +14,7 @@ from wartnode.rpc import NodeRPC
 
 @unittest.skipUnless(sys.platform == 'win32', 'Windows native component qualification')
 class NativeFeePolicy(unittest.TestCase):
-    def test_production_launch_uses_official_default_fee(self):
+    def test_production_launch_sets_the_selected_minimum_fee(self):
         root = Path(__file__).resolve().parents[1]
         temporary = root / 'work/test-tmp'
         temporary.mkdir(parents=True, exist_ok=True)
@@ -33,7 +33,8 @@ class NativeFeePolicy(unittest.TestCase):
             def start_disposable(arguments, cwd):
                 # Change only fixture ports/connectivity. Keep fee arguments
                 # exactly as produced by the real application launcher.
-                self.assertFalse(any(str(arg).startswith('--minfee') for arg in arguments))
+                self.assertEqual([str(arg) for arg in arguments if str(arg).startswith('--minfee')],
+                                 ['--minfee=0.00009992'])
                 ports = {'--rpc=': runtime.RPC_PORT, '--stratum=': runtime.STRATUM_PORT,
                          '--bind=': runtime.P2P_PORT}
                 command = []
@@ -61,8 +62,8 @@ class NativeFeePolicy(unittest.TestCase):
                     except ValueError:
                         time.sleep(.1)
                 else:
-                    self.fail('Official node did not expose its default fee')
-                self.assertEqual(fee, 1000448)
+                    self.fail('Managed node did not expose its configured fee')
+                self.assertEqual(fee, 9992)
             finally:
                 result = runtime.stop_node()
                 self.assertTrue(result['graceful'])

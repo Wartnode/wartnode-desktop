@@ -27,6 +27,9 @@ class SecretDialogTests(unittest.TestCase):
         self.window=Window(data_root(self.temp.name),autostart=False)
         self.window.timer.stop()
         until(lambda:not self.window.tasks)
+        self.window.signer.call('setup',password='synthetic-phrase-password')
+        self.window.refresh_wallets()
+        until(lambda:not self.window.tasks)
 
     def tearDown(self):
         self.window.exiting=True;self.window.signer.close()
@@ -46,7 +49,8 @@ class SecretDialogTests(unittest.TestCase):
                     observed['rejected']=dialog.result()==QDialog.DialogCode.Rejected
                     timer.stop();break
         timer.timeout.connect(inspect);timer.start(20)
-        with patch.object(self.window,'password',return_value='synthetic-phrase-password'):
+        with patch.object(self.window,'password',return_value='synthetic-phrase-password'), \
+             patch('wartnode.ui.QInputDialog.getText',return_value=('Main wallet',True)):
             self.window.create_wallet()
             until(lambda:bool(observed) and not self.window.tasks)
         timer.stop()
@@ -54,12 +58,12 @@ class SecretDialogTests(unittest.TestCase):
         self.assertIsNone(self.window.address)
         address=self.window.signer.call('list')['wallets'][0]['address']
         self.window.signer.call('unlock',address=address,password='synthetic-phrase-password')
-        backup=Path(self.temp.name)/'recovery.wartbackup'
-        self.window.signer.call('backup',path=str(backup),password='synthetic-backup-password')
+        backup=Path(self.temp.name)/'recovery.wartprofile'
+        self.window.signer.call('backup',path=str(backup),password='synthetic-phrase-password')
         with tempfile.TemporaryDirectory() as restored:
             signer=Signer(restored)
             try:
-                signer.call('restore',{'path':str(backup),'password':'synthetic-backup-password'})
+                signer.call('restore',{'path':str(backup),'password':'synthetic-phrase-password'})
                 self.assertEqual(signer.call('unlock',{'address':address,'password':'synthetic-phrase-password'})['address'],address)
             finally:signer.store.con.close()
 
@@ -87,6 +91,7 @@ class SettlementRPC(FakeRPC):
 class SettlementTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.signer=Signer(self.temp.name)
+        self.signer.call('setup',{'password':'synthetic-password'})
         self.signer.call('import',{'kind':'private','secret':'00'*31+'01','password':'synthetic-password'})
         self.transport=patch('wartnode.signer.NodeRPC',SettlementRPC);self.transport.start()
         SettlementRPC.current='ab'*32;FakeRPC.result='pending';FakeRPC.fee=9992

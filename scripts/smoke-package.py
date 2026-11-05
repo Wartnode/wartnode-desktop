@@ -42,7 +42,8 @@ with tempfile.TemporaryDirectory(prefix='packaged-wallet-',dir=root/'work') as d
     first.mkdir();second.mkdir()
     client=Client(first)
     try:
-        created=client.call('create',password='synthetic-package-password')
+        client.call('setup',password='synthetic-package-password')
+        created=client.call('create',label='Main')
         address=created['address']
         assert len(created['phrase'].split())==24
         created.clear()
@@ -50,15 +51,26 @@ with tempfile.TemporaryDirectory(prefix='packaged-wallet-',dir=root/'work') as d
         client.call('lock')
         assert client.call('list')['address'] is None
         client.call('unlock',address=address,password='synthetic-package-password')
-        backup=Path(directory)/'wallet.wartbackup'
-        client.call('backup',path=str(backup),password='synthetic-backup-password')
+        imported=client.call('import',kind='private',secret='00'*31+'01',label='Mining')
+        mining_address=imported['address']
+        client.call('save_contact',name='Recipient',address=mining_address)
+        client.call('edit_address',address=mining_address,default=True)
+        client.call('change_password',old_password='synthetic-package-password',new_password='synthetic-new-password')
+        client.call('unlock',password='synthetic-new-password')
+        backup=Path(directory)/'profile.wartprofile'
+        client.call('backup',path=str(backup),password='synthetic-new-password')
     finally:client.close()
     restored=Client(second)
     try:
-        assert restored.call('restore',path=str(backup),password='synthetic-backup-password')['added']==1
-        assert restored.call('unlock',address=address,password='synthetic-package-password')['address']==address
+        assert restored.call('restore',path=str(backup),password='synthetic-new-password')['added']==2
+        assert restored.call('unlock',address=address,password='synthetic-new-password')['address']==address
+        records=restored.call('list')
+        assert {r['label'] for r in records['wallets']}=={'Main','Mining'}
+        assert records['contacts']==[{'name':'Recipient','address':mining_address}]
+        assert next(r for r in records['wallets'] if r['address']==mining_address)['default']
     finally:restored.close()
-receipt={'frozen_helper':True,'python_on_path':False,'create_24_words':True,'lock_unlock':True,'encrypted_backup_restore':True,'funds_used':False}
+receipt={'frozen_helper':True,'python_on_path':False,'create_24_words':True,'lock_unlock':True,'encrypted_backup_restore':True,
+         'shared_password_multiple_addresses':True,'labels_contacts_default_restored':True,'password_change_qualified':True,'funds_used':False}
 receipt['helper_sha256']=hashlib.sha256(helper.read_bytes()).hexdigest()
 receipt['package_dir']=str(options.package_dir.resolve())
 (root/'evidence/package-smoke.json').write_text(json.dumps(receipt,indent=2),encoding='utf-8')

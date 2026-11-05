@@ -21,7 +21,9 @@ def main():
         base=Path(temporary)
         profile=data_root(base/'钱包 Wallet data')
         signer=SignerClient(profile)
-        try:signer.call('import',kind='private',secret='00'*31+'01',password='synthetic-storage-password')
+        try:
+            signer.call('setup',password='synthetic-storage-password')
+            signer.call('import',kind='private',secret='00'*31+'01',label='Storage test')
         finally:signer.close()
         wallet_hash=updates.sha(profile/'wallet.db')
         runtime=Runtime(profile)

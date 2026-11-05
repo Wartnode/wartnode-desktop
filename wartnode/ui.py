@@ -20,6 +20,14 @@ from .connection import client as connection_client
 from .explorer import Explorer
 from . import settings, updates
 from .mining import PRESETS, worker_threads
+from .dashboard import ConnectionStatus, ProfileBalance, SampleHistory
+from .wallet_ui import WalletActions
+from .statistics import ProcessSampler, network_statistics, hashrate_text, difficulty_text
+from .mining_ui import MiningActions
+from .explorer_ui import ExplorerActions
+from .preferences_ui import PreferencesActions
+from .activity_ui import ActivityActions
+from .desktop_preferences import startup_enabled
 
 
 class SetupDialog(QDialog):
@@ -49,6 +57,8 @@ class SetupDialog(QDialog):
         actions=QHBoxLayout();actions.addWidget(button('Cancel',self.reject));actions.addWidget(self.continue_button);layout.addLayout(actions)
         self.method.currentIndexChanged.connect(self.update_space);self.trust.toggled.connect(self.update_space)
         self.update_space()
+        from .widgets import scroll_dialog
+        scroll_dialog(self)
 
     def choose_folder(self):
         path=QFileDialog.getExistingDirectory(self,'Choose an empty blockchain folder',self.storage.text())
@@ -97,137 +107,74 @@ class Task(QRunnable):
             self.signals.done.emit(None, str(exc)[:300])
 
 
-def label(text="", name=None, muted=False):
-    widget = QLabel(text)
-    widget.setTextFormat(Qt.TextFormat.PlainText)
-    widget.setWordWrap(True)
-    if name:
-        widget.setObjectName(name)
-    widget.setProperty("muted", muted)
-    return widget
+from .widgets import label, button, table, populate, format_wart, LogView
 
 
-def button(text, callback, primary=False):
-    widget = QPushButton(text)
-    widget.setProperty("primary", primary)
-    widget.clicked.connect(callback)
-    return widget
-
-
-def table(headers):
-    widget = QTableWidget(0, len(headers))
-    widget.setHorizontalHeaderLabels(headers)
-    widget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-    widget.verticalHeader().hide()
-    widget.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-    widget.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-    widget.setAlternatingRowColors(True)
-    return widget
-
-
-def populate(widget, rows):
-    widget.setRowCount(len(rows))
-    for y, row in enumerate(rows):
-        for x, value in enumerate(row):
-            item = QTableWidgetItem(str(value))
-            item.setToolTip(str(value))
-            widget.setItem(y, x, item)
-    widget.resizeRowsToContents()
-
-
-def format_wart(e8):
-    return f"{int(e8)//100000000:,}.{int(e8)%100000000:08d}"
-
-
-class LogView(QPlainTextEdit):
-    """Append bounded log updates, following the tail until the reader scrolls up."""
-    def __init__(self):
-        super().__init__()
-        self.setReadOnly(True)
-        self.setMaximumBlockCount(250)
-        self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
-        self.lines = ()
-        self.following = True
-        self.reading_position = 0
-        scroll = self.verticalScrollBar()
-        scroll.actionTriggered.connect(lambda _: self.set_following(scroll.sliderPosition()))
-        scroll.sliderMoved.connect(self.set_following)
-        scroll.rangeChanged.connect(lambda *_: QTimer.singleShot(0,self.follow_newest))
-
-    def set_following(self, position):
-        self.reading_position = position
-        self.following = position >= self.verticalScrollBar().maximum()-1
-
-    def follow_newest(self):
-        scroll = self.verticalScrollBar()
-        scroll.setValue(scroll.maximum() if self.following else self.reading_position)
-
-    def showEvent(self, event):
-        super().showEvent(event)
-        QTimer.singleShot(0,self.follow_newest)
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        QTimer.singleShot(0,self.follow_newest)
-
-    def wheelEvent(self, event):
-        super().wheelEvent(event)
-        self.set_following(self.verticalScrollBar().value())
-
-    def keyPressEvent(self, event):
-        super().keyPressEvent(event)
-        if event.key() in (Qt.Key.Key_Up,Qt.Key.Key_Down,Qt.Key.Key_PageUp,
-                           Qt.Key.Key_PageDown,Qt.Key.Key_Home,Qt.Key.Key_End):
-            self.set_following(self.verticalScrollBar().value())
-
-    def update_lines(self, lines):
-        incoming = tuple(lines)[-self.maximumBlockCount():]
-        if incoming == self.lines:
-            return
-        scroll = self.verticalScrollBar()
-        previous_position = self.reading_position
-        follow_tail = self.following
-        overlap = next((count for count in range(min(len(self.lines),len(incoming)),0,-1)
-                        if self.lines[-count:] == incoming[:count]),0)
-        if overlap and overlap < len(incoming):
-            added = incoming[overlap:]
-            removed = max(0,len(self.lines)+len(added)-self.maximumBlockCount())
-            self.appendPlainText('\n'.join(added))
-            if not follow_tail:
-                self.reading_position = max(0,previous_position-removed)
-                scroll.setValue(self.reading_position)
-        else:
-            # A process restart replaces the stream and starts a fresh tail.
-            self.setPlainText('\n'.join(incoming))
-            follow_tail = True
-        self.lines = incoming
-        self.following = follow_tail
-        if follow_tail:
-            scroll.setValue(scroll.maximum())
-
-
-class Window(QMainWindow):
+class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,ActivityActions,QMainWindow):
     def __init__(self, directory, autostart=False, installed_root=None):
         super().__init__()
         self.directory = Path(directory)
         self.installed_root = Path(installed_root) if installed_root else None
         self.runtime=Runtime(directory)
         self.preferences = settings.load(directory)
+        if self.installed_root:
+            registered=startup_enabled(self.installed_root,self.directory)
+            if registered!=self.preferences['launch_at_startup']:
+                self.preferences=settings.save(directory,launch_at_startup=registered)
         self.init_busy=False
         self.mode_busy=False
         self.mining_busy=False
+        self.editing_mining=False
+        self.hash_history=SampleHistory()
         self.init_cancel=threading.Event()
         self.update_envelope = None
+        self.update_checking=False
+        self.last_update_check=0
         self.signer = SignerClient(directory)
         self.pool = QThreadPool(self)
         self.pool.setMaxThreadCount(4)
+        self.lifecycle_pool=QThreadPool(self)
+        self.lifecycle_pool.setMaxThreadCount(1)
         self.tasks = set()
         self.wallets, self.address = [], None
+        self.profile_contacts=[]
+        self.public_address=None
+        self.address_page=0
+        self.visible_addresses=[]
+        self.address_balances={}
+        self.wallet_generation=0
+        self.balance_polling=False
+        self.balance_offset=0
+        self.balance_rows=[]
+        self.balance_cycle_started=0
+        self.profile_balance=None
+        self.activity_data=None
+        self.activity_error=None
+        self.activity_busy=False
+        self.activity_turn=0
+        self.journal_busy=False
+        self.journal_turn=0
+        self.payment_rows={}
+        self.network_data=None
+        self.network_polling=False
+        self.last_network_attempt=0.0
+        self.resources_polling=False
+        self.node_sampler=ProcessSampler()
+        self.miner_sampler=ProcessSampler()
+        self.miner_resources={}
+        self.profile_ready = False
+        self.profile_unlocked = False
+        self.last_profile_touch = 0.0
         self.devices = {}
         self.session_generation = 0
+        self.payment_generation=0
         self.secret_dialogs = {}
         self.explorer_generation = 0
         self.explorer_page = None
+        self.blocks_paused=False
+        self.explorer_selected=None
+        self.latest_block_rows=[]
+        self.rolling_rows=[]
         self.polling, self.indexing, self.exiting, self.closing = False, False, False, False
         self.session_notifications = False
         self.setWindowTitle("Wartnode-Desktop")
@@ -281,7 +228,7 @@ class Window(QMainWindow):
         content.setSpacing(20)
         top = QHBoxLayout()
         self.context = label("Full node · Stopped", muted=True)
-        self.lock_button = button("Wallet locked", self.lock_wallet)
+        self.lock_button = button("Profile locked", lambda:self.lock_wallet() if self.profile_unlocked else self.ensure_profile())
         top.addWidget(self.context, 1)
         top.addWidget(self.lock_button)
         content.addLayout(top)
@@ -295,7 +242,7 @@ class Window(QMainWindow):
         self.build_mine()
         self.build_explorer()
         self.build_settings()
-        self.navigate(0)
+        self.navigate(settings.PAGES.index(self.preferences['start_page']))
         self.tray = QSystemTrayIcon(self.windowIcon(), self)
         self.tray.setToolTip("Wartnode-Desktop")
         menu = QMenu()
@@ -305,6 +252,8 @@ class Window(QMainWindow):
         self.tray.setContextMenu(menu)
         self.tray.activated.connect(lambda reason: self.show_normal() if reason == QSystemTrayIcon.ActivationReason.DoubleClick else None)
         self.tray.show()
+        theme.apply(QApplication.instance(),self.preferences['appearance'])
+        self.schedule_update_checks()
         self.refresh_wallets()
         self.update_state(self.runtime.state)
         if self.preferences["connection_mode"]=="local":self.submit(self.runtime.detect_devices, self.devices_loaded)
@@ -314,7 +263,7 @@ class Window(QMainWindow):
         self.idle = QTimer(self)
         self.idle.setSingleShot(True)
         self.idle.timeout.connect(self.lock_wallet)
-        self.idle.start(300000)
+        self.refresh_lock_policy()
         QApplication.instance().installEventFilter(self)
         if os.name == 'nt':
             import ctypes
@@ -330,20 +279,32 @@ class Window(QMainWindow):
     def eventFilter(self, obj, event):
         from PySide6.QtCore import QEvent
         if event.type() in (QEvent.Type.KeyPress, QEvent.Type.MouseButtonPress):
-            self.idle.start(300000)
+            self.refresh_lock_policy()
+            if self.profile_unlocked and time.monotonic()-self.last_profile_touch > 15:
+                self.last_profile_touch = time.monotonic()
+                def touched(result, error):
+                    if error == 'Unlock your profile first':self.lock_wallet()
+                self.submit(lambda:self.signer.call('touch'),touched,quiet=True)
         return super().eventFilter(obj, event)
+
+    def refresh_lock_policy(self):
+        minutes = self.preferences['auto_lock_minutes']
+        if minutes:self.idle.start(minutes*60000)
+        else:self.idle.stop()
 
     def nativeEvent(self, event_type, message):
         if os.name == 'nt':
             import ctypes
             from ctypes import wintypes
             msg = wintypes.MSG.from_address(int(message))
+            if msg.message in (0x001A,0x031A):
+                QTimer.singleShot(0,lambda:theme.apply(QApplication.instance(),self.preferences['appearance']))
             if msg.message == 0x02B1 and msg.wParam in (2, 6, 7):
                 # Remote disconnect, logoff and session lock invalidate signing context.
                 self.lock_wallet()
         return False, 0
 
-    def submit(self, function, callback=None, quiet=False, during_shutdown=False):
+    def submit(self, function, callback=None, quiet=False, during_shutdown=False,lifecycle=False):
         task = Task(function)
         self.tasks.add(task)
 
@@ -352,6 +313,10 @@ class Window(QMainWindow):
             if self.exiting or (self.closing and not during_shutdown):
                 return
             if error:
+                if self.signer.process.poll() is not None and self.profile_unlocked:
+                    self.lock_wallet()
+                    error='The signing helper stopped. Restart Wartnode-Desktop; saved payments remain reserved.'
+                    self.notice.setText(error)
                 if not quiet:
                     self.notice.setText(error)
                 if callback:
@@ -359,7 +324,10 @@ class Window(QMainWindow):
             elif callback:
                 callback(result, None)
         task.signals.done.connect(done, Qt.ConnectionType.QueuedConnection)
-        self.pool.start(task)
+        (self.lifecycle_pool if lifecycle or during_shutdown else self.pool).start(task)
+
+    def guard_signer(self,generation,action,**args):
+        return self.signer.call(action,_valid=lambda:generation==self.session_generation,**args)
 
     def page(self, title, description):
         widget = QWidget()
@@ -391,162 +359,26 @@ class Window(QMainWindow):
             self.submit(lambda:settings.storage_info(self.directory),loaded)
 
     def build_overview(self):
-        page = self.page("Overview", "")
-        cards = QHBoxLayout()
-        self.summaries = {}
-        for name, value in (("Connection", "Stopped"), ("Available WART", "Unlock a wallet"), ("Solo mining", "Stopped")):
-            panel = QFrame()
-            panel.setObjectName("panel")
-            panel_layout = QVBoxLayout(panel)
-            panel_layout.setContentsMargins(22, 22, 22, 22)
-            panel_layout.addWidget(label(name, muted=True))
-            summary = label(value, "value")
-            panel_layout.addWidget(summary)
-            self.summaries[name] = summary
-            cards.addWidget(panel)
-        page.addLayout(cards)
-        self.overview_status = label("Initialize a full node or choose Lite wallet in Settings. You can create or restore a wallet at any time.")
-        page.addWidget(self.overview_status)
-        actions = QHBoxLayout()
-        actions.addWidget(button("Open wallet", lambda: self.navigate(2), True))
-        actions.addWidget(button("Explore blocks", lambda: self.navigate(4)))
-        actions.addStretch()
-        page.addLayout(actions)
-        page.addWidget(label("Recent blocks"))
-        self.recent_table = table(["Height", "Block hash", "Time (UTC)"])
-        self.recent_table.cellDoubleClicked.connect(lambda row, _: self.open_block(self.recent_table.item(row, 0).text()))
-        page.addWidget(self.recent_table, 1)
+        from .pages import build_overview
+        build_overview(self)
 
     def build_node(self):
-        page = self.page("Full node", "Download and verify the Warthog blockchain.")
-        self.node_status = label("Stopped", "value")
-        page.addWidget(self.node_status)
-        self.node_details = label("", muted=True)
-        page.addWidget(self.node_details)
-        actions = QHBoxLayout()
-        self.start_node_button = button("Start node", self.start_node, True)
-        self.stop_node_button = button("Stop node", lambda: self.submit(self.runtime.stop_node, lambda *_: self.tick()))
-        self.initialize_node_button=button("Initialize node…",self.first_use)
-        actions.addWidget(self.initialize_node_button)
-        actions.addWidget(self.start_node_button)
-        actions.addWidget(self.stop_node_button)
-        actions.addWidget(button("Resync blockchain…", self.resync))
-        actions.addStretch()
-        page.addLayout(actions)
-        page.addWidget(label("Node log"))
-        self.node_log = LogView()
-        page.addWidget(self.node_log, 1)
+        from .pages import build_node
+        build_node(self)
 
     def build_wallet(self):
-        page = self.page("Wallet", "You can keep your wallet locked while mining.")
-        self.wallet_choice = QComboBox()
-        self.wallet_choice.setAccessibleName("Saved wallet")
-        page.addWidget(self.wallet_choice)
-        actions = QHBoxLayout()
-        for title, callback, primary in (("Create wallet", self.create_wallet, True), ("Import wallet", self.import_wallet, False),
-                                         ("Unlock", self.unlock_wallet, False), ("Back up", self.backup_wallet, False), ("Restore backup", self.restore_wallet, False)):
-            actions.addWidget(button(title, callback, primary))
-        page.addLayout(actions)
-        self.wallet_status = label("Create, import or restore a wallet.", muted=True)
-        page.addWidget(self.wallet_status)
-        tabs = QTabWidget()
-        page.addWidget(tabs, 1)
-        receive = QWidget()
-        receiving = QVBoxLayout(receive)
-        self.receive_address = QLineEdit()
-        self.receive_address.setReadOnly(True)
-        self.receive_address.setAccessibleName("Receiving address")
-        receiving.addWidget(label("Receiving address · Warthog"))
-        receiving.addWidget(self.receive_address)
-        receiving.addWidget(button("Copy address", lambda: QApplication.clipboard().setText(self.receive_address.text())))
-        receiving.addWidget(button('View activity and rewards',lambda:self.explore_value(self.receive_address.text())))
-        self.qr = label("Unlock a wallet to show its QR code.")
-        self.qr.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        receiving.addWidget(self.qr, 1)
-        tabs.addTab(receive, "Receive")
-        sending = QWidget()
-        send_layout = QVBoxLayout(sending)
-        form = QFormLayout()
-        self.recipient, self.amount = QLineEdit(), QLineEdit()
-        self.recipient.setPlaceholderText("48-character Warthog address")
-        self.amount.setPlaceholderText("0.00000000")
-        form.addRow("Recipient", self.recipient)
-        form.addRow("Amount (WART)", self.amount)
-        send_layout.addLayout(form)
-        contact_actions = QHBoxLayout()
-        contact_actions.addWidget(button('Choose contact…', self.choose_contact))
-        contact_actions.addWidget(button('Save contact…', self.save_contact))
-        contact_actions.addStretch()
-        send_layout.addLayout(contact_actions)
-        send_layout.addWidget(label("Review the amount and fee before sending. Funds for pending or uncertain payments remain reserved.", muted=True))
-        send_actions = QHBoxLayout()
-        self.review_button = button("Review payment", self.review_payment, True)
-        self.max_button = button("Send Max", lambda: self.review_payment(True))
-        send_actions.addWidget(self.review_button)
-        send_actions.addWidget(self.max_button)
-        send_actions.addStretch()
-        send_layout.addLayout(send_actions)
-        send_layout.addStretch()
-        tabs.addTab(sending, "Send")
-        history_page = QWidget()
-        history_layout = QVBoxLayout(history_page)
-        history_layout.addWidget(label('Outgoing payments. Use View activity and rewards under Receive for incoming transfers and mining rewards.',muted=True))
-        history_layout.addWidget(button("Refresh payments", self.refresh_history))
-        self.history_table = table(["Date (UTC)", "Amount", "Fee", "Status", "Transaction hash"])
-        self.history_table.cellDoubleClicked.connect(lambda row,column: self.explore_value(self.history_table.item(row,4).text()))
-        history_layout.addWidget(self.history_table)
-        tabs.addTab(history_page, "Payments")
+        from .pages import build_wallet
+        build_wallet(self)
 
     def build_mine(self):
-        page = self.page("Solo mining", "Mine with your GPU and CPU using your local node.")
-        self.mining_status = label("Stopped", "value")
-        page.addWidget(self.mining_status)
-        form = QFormLayout()
-        self.payout = QLineEdit()
-        self.payout.setPlaceholderText("Warthog address")
-        form.addRow("Payout address", self.payout)
-        self.payout.setText(self.preferences['payout_address'])
-        self.mining_mode=QComboBox()
-        for title,key in (('Light (20%)','light'),('Normal (50%)','normal'),('Heavy (80%)','heavy'),('Custom','custom')):
-            self.mining_mode.addItem(title,key)
-        self.mining_mode.setAccessibleName('Mining mode')
-        self.mining_mode.setCurrentIndex(self.mining_mode.findData(self.preferences['mining_mode']))
-        form.addRow('Mode',self.mining_mode)
-        self.cpu_limit,self.gpu_limit=QSpinBox(),QSpinBox()
-        for control,key,title in ((self.cpu_limit,'cpu_limit','CPU limit'),(self.gpu_limit,'gpu_limit','GPU limit')):
-            control.setRange(5,95);control.setSuffix('%');control.setValue(self.preferences[key])
-            control.setAccessibleName(title);form.addRow(title,control)
-        self.cpu_limit.setToolTip('Maximum total CPU capacity available to this miner, including its GPU driver work.')
-        self.gpu_limit.setToolTip('Maximum share of time spent dispatching GPU mining work. Other applications can use the GPU independently.')
-        self.mining_mode.currentIndexChanged.connect(self.change_mining_mode)
-        self.cpu_limit.valueChanged.connect(self.change_mining_limits)
-        self.gpu_limit.valueChanged.connect(self.change_mining_limits)
-        self.backend = QComboBox()
-        for title, value in (("GPU + CPU (OpenCL)", "opencl"),):
-            self.backend.addItem(title, value)
-        form.addRow("Mining hardware", self.backend)
-        self.device = QComboBox()
-        self.device.addItem('Detecting GPUs…', 0)
-        form.addRow('GPU', self.device)
-        self.backend.currentIndexChanged.connect(self.update_devices)
-        page.addLayout(form)
-        page.addWidget(label("Requires a graphics driver with OpenCL support. No CUDA Toolkit is needed.", muted=True))
-        page.addWidget(label('Limits apply to this miner. Actual usage may be lower. Stop mining to change them.',muted=True))
-        actions = QHBoxLayout()
-        self.start_mining = button("Start mining", self.start_miner, True)
-        actions.addWidget(self.start_mining)
-        actions.addWidget(button("Stop mining", lambda: self.submit(self.runtime.miner.stop)))
-        actions.addStretch()
-        page.addLayout(actions)
-        self.miner_rates = label("Start mining to see hash rates.", muted=True)
-        self.miner_rates.setToolTip("Janus is the combined mining rate. GPU SHA and CPU Verus show the individual stages.")
-        page.addWidget(self.miner_rates)
-        self.miner_log = LogView()
-        page.addWidget(self.miner_log, 1)
+        from .pages import build_mine
+        build_mine(self)
 
     def save_mining_limits(self):
+        if self.editing_mining:return
         self.preferences=settings.save(self.directory,mining_mode=self.mining_mode.currentData(),
             cpu_limit=self.cpu_limit.value(),gpu_limit=self.gpu_limit.value())
+        self.render_mining_configuration()
 
     def change_mining_mode(self):
         mode=self.mining_mode.currentData()
@@ -562,81 +394,16 @@ class Window(QMainWindow):
         self.save_mining_limits()
 
     def build_explorer(self):
-        page = self.page("Explorer", "Search blocks, transactions and addresses.")
-        search = QHBoxLayout()
-        self.search = QLineEdit()
-        self.search.setPlaceholderText("Block height, block hash, transaction hash or address")
-        self.search.returnPressed.connect(self.search_explorer)
-        search.addWidget(self.search, 1)
-        search.addWidget(button("Search", self.search_explorer, True))
-        self.older_results = button('Older results',lambda: self.search_explorer(True))
-        self.older_results.setEnabled(False)
-        self.search.textChanged.connect(lambda: self.older_results.setEnabled(False))
-        search.addWidget(self.older_results)
-        page.addLayout(search)
-        self.coverage = label("Recent blocks are cached. Older data loads from your node.", muted=True)
-        page.addWidget(self.coverage)
-        self.explorer_results = table(["Height", "Type", "Amount (WART)", "Sender", "Recipient", "Hash"])
-        self.explorer_results.cellDoubleClicked.connect(self.explorer_link)
-        self.explorer_results.setToolTip('Double-click a height, address or hash to open its details.')
-        page.addWidget(self.explorer_results, 1)
-        self.explorer_details = QPlainTextEdit()
-        self.explorer_details.setReadOnly(True)
-        self.explorer_details.setMaximumHeight(200)
-        page.addWidget(self.explorer_details)
+        from .pages import build_explorer
+        build_explorer(self)
 
     def build_settings(self):
-        page = self.page("Settings", "")
-        tabs = QTabWidget()
-        page.addWidget(tabs, 1)
-        storage_page, update_page, about_page = QWidget(), QWidget(), QWidget()
-        storage, update, about = QVBoxLayout(storage_page), QVBoxLayout(update_page), QVBoxLayout(about_page)
-        for widget, title in ((storage_page,'Storage'),(update_page,'Updates'),(about_page,'About')):
-            tabs.addTab(widget,title)
-        storage.addWidget(label(f'Wallet data folder\n{self.directory}', muted=True))
-        storage.addWidget(label('Connection'))
-        self.connection_choice=QComboBox()
-        self.connection_choice.addItem('Full node','local');self.connection_choice.addItem('Lite wallet','lite')
-        self.connection_choice.setAccessibleName('Connection mode')
-        self.connection_choice.setCurrentIndex(1 if self.preferences['connection_mode']=='lite' else 0)
-        storage.addWidget(self.connection_choice)
-        self.apply_connection_button=button('Apply connection',self.change_connection)
-        storage.addWidget(self.apply_connection_button)
-        storage.addWidget(label('Lite uses mainnet.wartnode.com and the Wartnode explorer service. Keys and signing stay on this computer. Solo mining requires Full node.',muted=True))
-        self.storage_status = label('Blockchain folder\n'+str(settings.chain_directory(self.directory)))
-        storage.addWidget(self.storage_status)
-        self.storage_button = button('Change blockchain folder…', self.change_storage)
-        storage.addWidget(self.storage_button)
-        storage.addWidget(label('Stop the node and mining before changing storage. Wallets and payment history stay in the wallet data folder.', muted=True))
-        storage.addWidget(button('Clear explorer cache', self.clear_explorer_cache))
-        storage.addWidget(button('Initialize node…', self.first_use))
-        storage.addStretch()
-        configured = updates.configured(updates.policy())
-        self.update_status = label('Check for a newer version.' if configured and self.installed_root else
-            ('Updates are not configured for this development build.' if not configured else 'Install Wartnode-Desktop to use updates.'))
-        update.addWidget(self.update_status)
-        self.check_updates_button = button('Check for updates', self.check_updates)
-        self.check_updates_button.setEnabled(configured and bool(self.installed_root))
-        update.addWidget(self.check_updates_button)
-        self.install_update_button = button('Update and restart…', self.install_update, True)
-        self.install_update_button.setEnabled(False)
-        update.addWidget(self.install_update_button)
-        self.rollback_button = button('Return to previous version…', self.rollback_version)
-        self.rollback_button.setEnabled(bool(self.installed_root and (self.installed_root/'update-journal.json').exists()))
-        update.addWidget(self.rollback_button)
-        update.addWidget(label('Updates are verified before installation. The previous compatible version is kept for recovery. Wallets and payment history remain in the data folder.', muted=True))
-        update.addStretch()
-        about.addWidget(label(f'Wartnode-Desktop {__version__}\nWarthog\nWindows 11 x64 (24H2 or later)', muted=True))
-        about.addWidget(label('Local connections\nNode API: 127.0.0.1:19400\nMining (Stratum): 127.0.0.1:19456\nThe node connects to peers but does not accept incoming connections.', muted=True))
-        about.addWidget(label('Closing the window locks your wallet and leaves Wartnode-Desktop running in the tray. Use Exit Wartnode-Desktop to stop it. Startup with Windows and automatic mining are not available.', muted=True))
-        about.addWidget(button('Export diagnostics…', self.export_diagnostics))
-        about.addWidget(button('Component details', self.show_versions))
-        about.addStretch()
-        page.addWidget(button("Exit Wartnode-Desktop", self.exit_application))
+        from .pages import build_settings
+        build_settings(self)
 
     def change_connection(self):
         mode=self.connection_choice.currentData()
-        if mode==self.preferences['connection_mode'] or self.mode_busy or self.init_busy:return
+        if mode==self.preferences['connection_mode'] or self.mode_busy or self.init_busy or self.mining_busy:return
         if mode=='lite' and QMessageBox.question(self,'Lite wallet',
             'Connect to mainnet.wartnode.com and the Wartnode explorer service? They can see queried public addresses and supply balances, fees and confirmations. Keys and signing stay on this computer. Solo mining is unavailable.',
             QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.Cancel,QMessageBox.StandardButton.Cancel)!=QMessageBox.StandardButton.Yes:
@@ -650,17 +417,20 @@ class Window(QMainWindow):
             self.mode_busy=False;self.apply_connection_button.setEnabled(True)
             if result:
                 self.preferences=result
+                self.network_data=None;self.last_network_attempt=0
+                self.profile_balance=None;self.address_balances={}
+                self.wallet_generation+=1;self.balance_offset=0;self.balance_rows=[]
                 self.mode_label.setText('Lite wallet' if mode=='lite' else 'Full node')
                 self.notice.setText('Connection changed. Unlock your wallet to continue.')
                 self.refresh_wallets()
                 if mode=='local':self.submit(self.runtime.detect_devices,self.devices_loaded)
             self.connection_choice.setCurrentIndex(1 if self.preferences['connection_mode']=='lite' else 0)
             self.tick()
-        self.submit(switch,switched)
+        self.submit(switch,switched,lifecycle=True)
 
     def first_use(self):
         if self.preferences['connection_mode']=='lite':
-            self.notice.setText('Choose Full node in Settings to initialize a local node.');return
+            self.notice.setText('Choose Full node on the Node page to initialize a local node.');return
         if self.runtime.node.running or self.runtime.miner.running or self.init_busy:
             self.notice.setText('Stop the node and mining before initialization.');return
         dialog=SetupDialog(self.directory,self.devices,self)
@@ -702,20 +472,6 @@ class Window(QMainWindow):
                 self.notice.setText('Blockchain storage changed. Start the node to continue syncing.')
         self.submit(lambda:self.runtime.change_storage(destination),moved)
 
-    def choose_contact(self):
-        contacts=settings.load(self.directory)['contacts']
-        if not contacts:
-            self.notice.setText('No contacts saved. Enter a recipient address and choose Save contact.')
-            return
-        values=[c['name']+' · '+c['address'] for c in contacts]
-        value,accepted=QInputDialog.getItem(self,'Choose contact','Recipient',values,0,False)
-        if accepted:self.recipient.setText(contacts[values.index(value)]['address'])
-
-    def save_contact(self):
-        name,accepted=QInputDialog.getText(self,'Save contact','Name')
-        address=self.recipient.text()
-        if accepted:self.submit(lambda:settings.save_contact(self.directory,name,address),lambda result,error:self.notice.setText('Contact saved.') if not error else None)
-
     def explore_value(self,value):
         if value and value!='—':
             self.navigate(4)
@@ -723,21 +479,27 @@ class Window(QMainWindow):
             self.search_explorer()
 
     def explorer_link(self,row,column):
-        if column in (0,3,4,5):self.explore_value(self.explorer_results.item(row,column).text())
+        if column==0:self.open_web_explorer(self.explorer_results.item(row,column).text())
+        elif column in (3,4,5):self.explore_value(self.explorer_results.item(row,column).text())
 
     def check_updates(self):
+        if self.update_checking or not self.installed_root or not updates.configured(self.update_trust()):return
+        self.update_checking=True;self.last_update_check=time.monotonic()
+        trust=self.update_trust()
         self.check_updates_button.setEnabled(False)
         self.update_status.setText('Checking for updates…')
         current=updates.active(self.installed_root)
         def checked(result,error):
+            self.update_checking=False
             self.check_updates_button.setEnabled(True)
+            if trust!=self.update_trust():return
             if result:
                 self.update_envelope,payload=result
                 self.update_status.setText('Version '+payload['version']+' is available.')
                 self.install_update_button.setEnabled(True)
             elif error:self.update_status.setText(error)
         import sys
-        self.submit(lambda:updates.discover(updates.policy(),__version__,current.get('highest'),sys.getwindowsversion().build),checked)
+        self.submit(lambda:updates.discover(trust,__version__,current.get('highest'),sys.getwindowsversion().build),checked)
 
     def install_update(self):
         if not self.update_envelope or not self.installed_root:return
@@ -751,14 +513,14 @@ class Window(QMainWindow):
                 self.install_update_button.setEnabled(True)
                 self.check_updates_button.setEnabled(True)
         import sys
-        self.submit(lambda:updates.prepare(self.installed_root,self.update_envelope,updates.policy(),__version__,build=sys.getwindowsversion().build),prepared)
+        self.submit(lambda:updates.prepare(self.installed_root,self.update_envelope,self.update_trust(),__version__,build=sys.getwindowsversion().build),prepared)
 
     def rollback_version(self):
         if not self.installed_root:return
-        journal=updates.read_json(self.installed_root/'update-journal.json')
-        if journal.get('phase')!='complete' or journal.get('data_schema')!=updates.DATA_SCHEMA:
+        if not updates.rollback_available(self.installed_root):
             self.notice.setText('No compatible previous version is available.')
             return
+        journal=updates.read_json(self.installed_root/'update-journal.json')
         if QMessageBox.question(self,'Return to previous version','Stop the node and mining, then restart with the previous compatible application? Wallets and payment history will be kept.',QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.Cancel,QMessageBox.StandardButton.Cancel)==QMessageBox.StandardButton.Yes:
             from .paths import atomic_json
             atomic_json(self.installed_root/'rollback-request.json',{'version':journal['previous']['version']})
@@ -776,26 +538,32 @@ class Window(QMainWindow):
             if binding!=context(self.directory):return
             if state:
                 self.update_state(state)
-                if self.runtime.ready and self.address:
+                if self.runtime.ready:
+                    self.refresh_profile_balances()
+                    self.refresh_network_statistics()
+                    self.refresh_history()
+                if self.runtime.ready and self.address and self.send_dialog.isVisible():
                     self.submit(lambda: self.signer.call('balance'), self.balance_loaded, quiet=True)
             if self.runtime.miner.running and not self.runtime.ready:
                 self.submit(self.runtime.miner.stop, quiet=True)
             if self.runtime.rpc_available and state and state.get("height", 0) > 0:
                 self.update_index()
         self.submit(self.runtime.probe, polled, quiet=True)
+        self.refresh_process_statistics()
         self.node_log.update_lines(self.runtime.node.lines)
         self.miner_log.update_lines(self.runtime.miner.lines)
         running = self.runtime.miner.running
         self.mining_status.setText("Mining to local node" if running else "Unavailable in Lite mode" if self.preferences["connection_mode"]=="lite" else "Stopped")
         self.summaries["Solo mining"].setText("Unavailable" if self.preferences["connection_mode"]=="lite" else "Running" if running else "Stopped")
         for widget in (self.payout, self.mining_mode, self.cpu_limit, self.gpu_limit, self.backend, self.device):
-            widget.setEnabled(not running and not self.mining_busy)
+            widget.setEnabled(not self.mining_busy and (not running or self.editing_mining))
         metrics = self.runtime.miner.metrics
         if metrics and running:
             rate = lambda key: f"{float(metrics.get(key,0))/1000000:.2f} MH/s"
             self.miner_rates.setText(f"Janus: {rate('janus_hps')} · GPU SHA: {rate('gpu_sha_hps')} · CPU Verus: {rate('verus_hps')}")
         elif not running:
             self.miner_rates.setText("Choose Full node to use solo mining." if self.preferences["connection_mode"]=="lite" else "Start mining to see hash rates.")
+        self.render_miner_telemetry()
 
     def update_state(self, state):
         text = {'Starting / loading chain': 'Loading blockchain',
@@ -814,19 +582,85 @@ class Window(QMainWindow):
         elif text=='Failed' and self.notice.text()=='Starting node…':
             self.notice.setText(state['error'])
         self.node_status.setText(text)
-        self.summaries["Connection"].setText(text)
-        self.node_details.setText(f"Block height: {state.get('height',0):,} · Peers: {state.get('peers',0)}\n{state.get('error','')}")
+        status=ConnectionStatus.from_runtime(state,mode)
+        self.connection_ring.set_status(status)
+        self.connection_detail.setText(status.detail)
+        self.node_panels['height'].set_value(f"{state.get('height',0):,}" if state.get('height') else '—')
+        self.node_panels['peers'].set_value(str(peers) if local else 'Remote')
+        self.node_panels['endpoint'].set_value('Local' if local else 'Lite',
+            '127.0.0.1:19400' if local else 'mainnet.wartnode.com')
+        self.node_details.setText(f"Block height: {state.get('height',0):,} · "+
+            (f"Peers: {state.get('peers',0)}" if local else 'Hosted mainnet service; remote peer count unavailable')+
+            f"\n{state.get('error','')}")
         self.overview_status.setText(f"Block height: {state.get('height',0):,}. " + ("Ready to send payments." if self.runtime.ready and not local else ("Ready to send payments and mine." if self.runtime.ready else "Connect to a ready node to send payments.")))
         self.review_button.setEnabled(self.runtime.ready and bool(self.address))
         self.max_button.setEnabled(self.runtime.ready and bool(self.address))
-        self.start_mining.setEnabled(local and self.runtime.ready and not self.runtime.miner.running and not self.mining_busy and self.has_mining_gpu())
+        self.start_mining.setEnabled(local and self.runtime.ready and not self.runtime.miner.running and not self.mining_busy and not self.editing_mining and self.has_mining_gpu())
         if self.address and not self.runtime.ready:
-            self.summaries['Available WART'].setText('Unavailable')
             self.wallet_status.setText('Wallet unlocked. Balance unavailable until the node is ready.')
+        self.update_profile_balance_display()
+        self.render_network_statistics()
+        if not self.runtime.rpc_available:
+            self.latest_blocks_status.setText('Cached blocks · Offline' if self.latest_block_rows else 'Connect a node to load the latest blocks.')
+
+    def refresh_network_statistics(self):
+        if self.network_polling or time.monotonic()-self.last_network_attempt<30:return
+        from .connection import context
+        binding=context(self.directory)
+        self.network_polling=True;self.last_network_attempt=time.monotonic()
+        def loaded(result,error):
+            self.network_polling=False
+            if binding!=context(self.directory):return
+            if result:self.network_data=result
+            self.render_network_statistics()
+        self.submit(lambda:network_statistics(connection_client(self.directory,deadline=time.monotonic()+20)),loaded,quiet=True)
+
+    def render_network_statistics(self):
+        data=self.network_data
+        if not data:
+            for panel in self.network_panels.values():panel.set_value('—')
+            self.network_source.setText('Network statistics unavailable.' if self.runtime.ready else 'Network statistics unavailable while offline or syncing.')
+            return
+        self.network_panels['hashrate'].set_value(hashrate_text(data['hashrate']),f"Estimate · last {data['hashrate_window']} blocks")
+        self.network_panels['difficulty'].set_value(difficulty_text(data['difficulty']))
+        self.network_panels['difficulty'].value.setToolTip(
+            f"{data['difficulty']:,.17g}" if data['difficulty'] is not None else 'Difficulty unavailable')
+        self.network_panels['interval'].set_value(f"{data['interval']:.1f} s" if data['interval'] is not None else '—',
+                                                f"Mean over {data['interval_blocks']} block intervals")
+        self.network_panels['reward'].set_value('••••••' if self.preferences['hide_balances'] else format_wart(data['reward'])+' WART' if data['reward'] is not None else '—','Most recent block reward')
+        age=max(0,int(time.monotonic()-data['checked']))
+        self.network_source.setText(f"{'Last known · ' if not self.runtime.ready or age>60 else ''}{data['source']} · height {data['height']:,} · updated {age}s ago")
+
+    def refresh_process_statistics(self):
+        if self.resources_polling:return
+        self.resources_polling=True
+        node_pid=self.runtime.node.process.pid if self.runtime.node.running else None
+        miner_pid=self.runtime.miner.process.pid if self.runtime.miner.running else None
+        def sample():
+            return self.node_sampler.sample(node_pid),self.miner_sampler.sample(miner_pid),settings.storage_info(self.directory)
+        def loaded(result,error):
+            self.resources_polling=False
+            if not result:return
+            node,miner,storage=result
+            local=self.preferences['connection_mode']=='local'
+            current_node=self.runtime.node.process.pid if self.runtime.node.running else None
+            current_miner=self.runtime.miner.process.pid if self.runtime.miner.running else None
+            if node['pid']==current_node:
+                self.node_panels['memory'].set_value(f"{node['memory_bytes']/1024**2:.1f} MiB" if node['memory_bytes'] is not None else '—')
+                cpu=f"{node['cpu_percent']:.1f}%" if node['cpu_percent'] is not None else 'Unavailable'
+                from .fees import NODE_MINIMUM_FEE
+                self.node_resources.setText(f'Node CPU: {cpu} · Managed minimum fee: {NODE_MINIMUM_FEE} WART' if local else 'Lite uses the selected remote service. Signing remains on this computer.')
+            if miner['pid']==current_miner:self.miner_resources=miner
+            self.node_panels['storage'].set_value(f"{storage['used']/1024**3:.2f} GiB" if local else 'Not required',
+                                                f"{storage['free']/1024**3:.1f} GiB free" if local else f"Local chain retained · {storage['used']/1024**3:.2f} GiB")
+            since=self.runtime.node.started_at if local and self.runtime.node.running else self.runtime.lite_connected_at if not local else None
+            elapsed=max(0,int(time.monotonic()-since)) if since is not None else None
+            self.node_panels['uptime'].set_value(f'{elapsed//3600}h {(elapsed%3600)//60}m' if elapsed is not None else '—')
+        self.submit(sample,loaded,quiet=True)
 
     def start_node(self):
         self.notice.setText("Starting node…")
-        self.submit(self.runtime.start_node, lambda result, error: self.tick())
+        self.submit(self.runtime.start_node, lambda result, error: self.tick(),lifecycle=True)
 
     def update_index(self):
         if self.indexing:
@@ -839,7 +673,7 @@ class Window(QMainWindow):
             store = Explorer(self.directory / "explorer.db")
             try:
                 store.sync(connection_client(self.directory,deadline=time.monotonic()+18), budget=10)
-                return store.summary(), store.recent()
+                return store.summary(), store.recent_details(25)
             finally:
                 store.con.close()
 
@@ -849,7 +683,7 @@ class Window(QMainWindow):
             if result:
                 summary, rows = result
                 self.coverage.setText(f"Cache: {summary['cached_blocks']} blocks · {summary['database_bytes']/1048576:.2f}/32 MiB" + (' · Cleanup pending' if summary['maintenance_pending'] else ''))
-                populate(self.recent_table, [[r['height'], r['hash'], datetime.fromtimestamp(r['timestamp'], timezone.utc).strftime('%Y-%m-%d %H:%M:%S')] for r in rows])
+                self.display_recent_blocks(rows)
         self.submit(index, indexed, quiet=True)
 
     def refresh_explorer(self):
@@ -860,8 +694,11 @@ class Window(QMainWindow):
         self.search.setText(str(height))
         self.search_explorer()
 
-    def search_explorer(self, older=False):
-        query = self.search.text().strip().lower()
+    def search_explorer(self, older=False, query_override=None, show_results=True):
+        query = query_override or self.search.text().strip().lower()
+        if not query:
+            self.show_latest_blocks();return
+        if show_results:self.explorer_views.setCurrentIndex(1)
         previous = self.explorer_page if older and self.explorer_page and self.explorer_page['query']==query else None
         before,anchor = (previous['next_before'],previous['anchor']) if previous else (0,None)
         self.explorer_generation += 1
@@ -897,14 +734,14 @@ class Window(QMainWindow):
                 entries = []
                 for kind, key in (('Reward','rewards'),('Transfer','transfers')):
                     for tx in block['body'][key]:
-                        entries.append([block['height'],kind,tx['amount'],tx.get('fromAddress','—'),tx['toAddress'],tx['txHash']])
+                        entries.append([block['height'],kind,'••••••' if self.preferences['hide_balances'] else tx['amount'],tx.get('fromAddress','—'),tx['toAddress'],tx['txHash']])
                 populate(self.explorer_results, entries)
                 canonical = result.get('canonical')
                 chain_status = 'Yes' if canonical is True else ('No' if canonical is False else 'Not checked (offline)')
                 self.explorer_details.setPlainText(f"Block {block['height']:,}\nHash: {block['header']['hash']}\nPrevious block: {block['header']['prevHash']}\nTime: {block.get('utc','')}\nTransactions: {len(entries)}\nConfirmations: {result.get('confirmations','unavailable')} · On current chain: {chain_status}\nLast checked: {result['checked']}")
             else:
-                populate(self.explorer_results, [[r['height'],r['kind'].capitalize(),format_wart(r['amount']),r['sender'] or '—',r['recipient'],r['hash']] for r in result['occurrences']])
-                prefix = (f"Address: {result['address']}\nOn-chain balance: {result.get('balance','unavailable')} WART\n" if result['type']=='address' else '')
+                populate(self.explorer_results, [[r['height'],r['kind'].capitalize(),'••••••' if self.preferences['hide_balances'] else format_wart(r['amount']),r['sender'] or '—',r['recipient'],r['hash']] for r in result['occurrences']])
+                prefix = (f"Address: {result['address']}\nOn-chain balance: {'••••••' if self.preferences['hide_balances'] else result.get('balance','unavailable')} WART\n" if result['type']=='address' else '')
                 cached = result['source']=='cache only'
                 scope = 'Cached results only. Start the node to load older data.' if cached else ('More results are available.' if result.get('next_before') else ('No more matches in the current chain.' if result.get('complete') else 'Hosted index coverage is incomplete; more matches may exist.'))
                 source = 'Local cache' if cached else result.get('source','Selected node')
@@ -912,18 +749,88 @@ class Window(QMainWindow):
         self.submit(search, found)
 
     def refresh_wallets(self):
+        generation=self.session_generation
         def loaded(result, error):
             if not result:
                 return
-            selected = self.wallet_choice.currentData()
+            selected = self.address or self.wallet_choice.currentData()
+            self.profile_ready = result['profile_ready']
+            if not self.profile_unlocked:
+                self.wallet_status.setText('Profile locked. Public addresses and recorded activity remain available.' if self.profile_ready else 'Set up your profile, then create or import an address.')
+            if generation==self.session_generation and result['locked'] and self.profile_unlocked:self.lock_wallet()
+            if [r['address'] for r in self.wallets] != [r['address'] for r in result['wallets']]:
+                self.wallet_generation+=1
+                self.balance_offset=0;self.balance_rows=[];self.profile_balance=None
             self.wallets = result['wallets']
+            self.profile_contacts=result['contacts']
+            self.wallet_choice.blockSignals(True)
             self.wallet_choice.clear()
             for record in self.wallets:
-                self.wallet_choice.addItem(record['address'], record['address'])
+                self.wallet_choice.addItem(record['label']+' · '+record['address'], record['address'])
             index = self.wallet_choice.findData(selected)
             if index >= 0:
                 self.wallet_choice.setCurrentIndex(index)
+            self.wallet_choice.blockSignals(False)
+            self.overview_balance.detail.setText(f'Combined across {len(self.wallets)} addresses in this profile')
+            if hasattr(self,'receive_choice'):
+                self.receive_choice.blockSignals(True);self.receive_choice.clear()
+                for record in self.wallets:self.receive_choice.addItem(record['label'],record['address'])
+                self.receive_choice.blockSignals(False)
+                self.display_receiving(self.public_address if any(r['address']==self.public_address for r in self.wallets)
+                    else self.wallets[0]['address'] if self.wallets else None)
+            self.refresh_address_tables()
+            if not self.wallets:self.profile_balance=ProfileBalance.from_rows([],[],'')
+            self.update_profile_balance_display()
+            self.refresh_activity(network=False)
+            if self.runtime.ready:self.refresh_profile_balances()
         self.submit(lambda: self.signer.call('list'), loaded)
+
+    def refresh_profile_balances(self):
+        if self.balance_polling or not self.wallets or not self.runtime.ready:return
+        from .connection import context
+        binding=context(self.directory)
+        generation=self.wallet_generation
+        expected=[r['address'] for r in self.wallets]
+        offset=self.balance_offset
+        if offset==0:
+            self.balance_rows=[];self.balance_cycle_started=time.monotonic()
+        self.balance_polling=True
+        def loaded(result,error):
+            self.balance_polling=False
+            if generation!=self.wallet_generation or binding!=context(self.directory):return
+            if not result:
+                self.balance_offset=0;self.balance_rows=[]
+                self.update_profile_balance_display(failed=True)
+                return
+            if result['total']!=len(expected):
+                self.balance_offset=0;self.balance_rows=[];self.refresh_wallets();return
+            self.balance_rows.extend(result['rows'])
+            self.address_balances.update({r['address']:r for r in result['rows']})
+            self.balance_offset=result['next_offset'] or 0
+            if not self.balance_offset:
+                try:
+                    self.profile_balance=ProfileBalance.from_rows(expected,self.balance_rows,result['source'],self.balance_cycle_started)
+                except ValueError:
+                    self.profile_balance=None
+            self.refresh_address_tables()
+            self.update_profile_balance_display()
+        self.submit(lambda:self.signer.call('profile_balances',offset=offset,limit=20),loaded,quiet=True)
+
+    def update_profile_balance_display(self,failed=False):
+        snapshot=self.profile_balance
+        masked=self.preferences['hide_balances']
+        panels=[self.overview_balance]
+        if hasattr(self,'wallet_balance'):panels.append(self.wallet_balance)
+        complete=snapshot is not None and snapshot.complete
+        unavailable=failed or not self.runtime.ready or snapshot is not None and not complete
+        value='••••••' if masked else format_wart(snapshot.available) if complete else 'Unavailable' if unavailable else 'Loading…'
+        count=len(self.wallets)
+        detail=f'Combined across {count} addresses in this profile'
+        if complete and count:
+            age=max(0,int(time.monotonic()-snapshot.checked))
+            detail+=f' · {"Last known · " if failed or not self.runtime.ready or age>30 else ""}updated {age}s ago'
+        elif count:detail+=' · complete balance unavailable'
+        for panel in panels:panel.set_value(value,detail)
 
     def password(self, title, prompt='Password'):
         return self.secret_input(title, prompt)
@@ -948,14 +855,13 @@ class Window(QMainWindow):
             clear();self.secret_dialogs.pop(dialog,None);dialog.deleteLater()
 
     def create_wallet(self):
-        generation = self.session_generation
-        password = self.password('Create wallet', 'Password (at least 8 characters)')
-        if password is None:
+        if not self.profile_ready or not self.profile_unlocked:
+            self.ensure_profile(self.create_wallet)
             return
-        confirmation = self.password('Confirm wallet password')
-        if generation != self.session_generation:return
-        if password != confirmation:
-            self.notice.setText('The passwords do not match.')
+        generation = self.session_generation
+        name, accepted = QInputDialog.getText(self, 'New address', 'Address label',
+                                            text=f'Address {len(self.wallets)+1}')
+        if not accepted or generation != self.session_generation:
             return
 
         def created(result, error):
@@ -985,9 +891,43 @@ class Window(QMainWindow):
             if generation != self.session_generation:
                 self.notice.setText('Recovery phrase hidden. Back up this wallet before receiving funds. Your saved wallet is kept.')
             self.refresh_wallets()
-        self.submit(lambda: self.signer.call('create', password=password), created)
+        self.submit(lambda: self.guard_signer(generation,'create', label=name), created)
+
+    def ensure_profile(self, after=None):
+        if self.mode_busy or self.closing or self.exiting:
+            self.notice.setText('Wait for the current connection or shutdown operation to finish.')
+            return
+        if self.profile_ready:
+            if self.profile_unlocked:
+                if after:after()
+            else:self.unlock_wallet(after)
+            return
+        generation = self.session_generation
+        password = self.password('Secure your profile', 'One password protects all your addresses (at least 8 characters)')
+        if password is None:return
+        confirmation = self.password('Confirm profile password')
+        if generation != self.session_generation:return
+        if password != confirmation:
+            self.notice.setText('The passwords do not match.')
+            return
+        def configured(result, error):
+            if not result or generation != self.session_generation:return
+            self.profile_ready = self.profile_unlocked = True
+            self.lock_button.setText('Lock profile')
+            self.wallet_status.setText('Profile unlocked. Create or import an address.')
+            if after:after()
+        self.submit(lambda:self.guard_signer(generation,'setup',password=password), configured)
+
+    def onboard_profile(self):
+        def loaded(result, error):
+            if result and not result['profile_ready']:
+                self.ensure_profile()
+        self.submit(lambda:self.signer.call('list'), loaded)
 
     def import_wallet(self):
+        if not self.profile_ready or not self.profile_unlocked:
+            self.ensure_profile(self.import_wallet)
+            return
         generation = self.session_generation
         kind, ok = QInputDialog.getItem(self, 'Import wallet', 'Import using', ['Recovery phrase (Warthog Desktop)', 'Private key'], 0, False)
         if not ok:
@@ -1006,51 +946,57 @@ class Window(QMainWindow):
                     QMessageBox.StandardButton.Cancel) == QMessageBox.StandardButton.Yes
                 if not legacy_confirmed:
                     return
-        password = self.password('Set wallet password', 'Password (at least 8 characters)')
-        if password is None or generation != self.session_generation:
-            return
-        self.submit(lambda: self.signer.call('import', kind='phrase' if is_phrase else 'private', secret=secret, password=password,legacy_confirmed=legacy_confirmed),
+        name, accepted = QInputDialog.getText(self, 'Import address', 'Address label', text=f'Address {len(self.wallets)+1}')
+        if not accepted or generation != self.session_generation:return
+        self.submit(lambda: self.guard_signer(generation,'import', kind='phrase' if is_phrase else 'private', secret=secret, label=name,legacy_confirmed=legacy_confirmed),
             lambda result, error: (self.select_unlocked(result['address']),self.refresh_wallets()) if result and generation==self.session_generation else self.refresh_wallets())
 
-    def unlock_wallet(self):
+    def unlock_wallet(self, after=None):
         generation = self.session_generation
         address = self.wallet_choice.currentData()
-        if not address:
-            return
-        password = self.password('Unlock wallet')
+        password = self.password('Unlock profile')
         if password is not None:
-            self.submit(lambda: self.signer.call('unlock', address=address, password=password),
-                lambda result, error: self.select_unlocked(result['address']) if result and generation==self.session_generation else None)
+            def unlocked(result, error):
+                if not result or generation != self.session_generation:return
+                self.select_unlocked(result['address'])
+                if callable(after):after()
+            self.submit(lambda: self.guard_signer(generation,'unlock', address=address, password=password),
+                unlocked)
 
     def select_unlocked(self, address):
+        self.profile_unlocked = True
         self.address = address
-        self.lock_button.setText('Lock wallet')
+        if hasattr(self,'wallet_choice'):
+            self.wallet_choice.blockSignals(True)
+            self.wallet_choice.setCurrentIndex(self.wallet_choice.findData(address))
+            self.wallet_choice.blockSignals(False)
+        self.lock_button.setText('Lock profile')
+        if not address:
+            self.wallet_status.setText('Profile unlocked. Create or import an address.')
+            return
         self.wallet_status.setText('Unlocked · ' + address)
-        self.receive_address.setText(address)
-        import qrcode
-        output = io.BytesIO()
-        qrcode.make(address).save(output, format='PNG')
-        pixmap = QPixmap()
-        pixmap.loadFromData(output.getvalue())
-        self.qr.setPixmap(pixmap.scaled(240,240,Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.FastTransformation))
+        self.display_receiving(address)
         if not self.payout.text():
             self.payout.setText(address)
+            if not self.editing_mining and not self.runtime.miner.running:
+                self.preferences=settings.save(self.directory,payout_address=address)
+        self.render_mining_configuration()
         self.submit(lambda: self.signer.call('balance'), self.balance_loaded, quiet=True)
         self.update_state(self.runtime.state)
         self.refresh_history()
 
     def balance_loaded(self, result, error):
-        if error == 'Unlock a wallet first' and self.address:
+        if error == 'Unlock your profile first' and (self.profile_unlocked or self.address):
             self.lock_wallet()
             return
         if error and self.address:
-            self.summaries['Available WART'].setText('Unavailable')
             self.wallet_status.setText('Wallet unlocked. Could not refresh the balance from the node.')
         if result and self.address and result.get('address') == self.address:
-            self.summaries['Available WART'].setText(format_wart(result['available']))
-            self.wallet_status.setText(f"Available {format_wart(result['available'])} WART · Reserved {format_wart(result['reserved'])} WART")
+            self.wallet_status.setText('Profile unlocked.' if self.preferences['hide_balances'] else
+                f"Selected address: available {format_wart(result['available'])} WART · Reserved {format_wart(result['reserved'])} WART")
 
     def lock_wallet(self):
+        self.profile_unlocked = False
         self.session_generation += 1
         # Qt modal dialogs run a nested event loop: idle and Windows lock
         # events still arrive while a recovery phrase or password is open.
@@ -1067,51 +1013,57 @@ class Window(QMainWindow):
         self.summaries['Available WART'].setText('Unlock a wallet')
         self.review_button.setEnabled(False)
         self.max_button.setEnabled(False)
-        self.submit(lambda: self.signer.call('lock'), quiet=True)
+        if hasattr(self,'receive_choice'):self.display_receiving(self.public_address)
+        self.update_profile_balance_display()
+        self.submit(lambda: self.signer.call('lock'), quiet=True,lifecycle=True)
 
     def backup_wallet(self):
-        path, _ = QFileDialog.getSaveFileName(self, 'Save encrypted wallet backup', str(self.directory/'backups'/'wallet.wartbackup'), 'Warthog backup (*.wartbackup)')
+        if not self.profile_unlocked:
+            self.ensure_profile(self.backup_wallet)
+            return
+        generation=self.session_generation
+        path, _ = QFileDialog.getSaveFileName(self, 'Save encrypted profile backup', str(self.directory/'backups'/'personal.wartprofile'), 'Wartnode profile (*.wartprofile)')
         if not path:
             return
-        password = self.password('Back up wallet', 'Backup password (at least 8 characters)')
+        password = self.password('Back up profile', 'Profile password')
         if password is not None:
-            self.submit(lambda: self.signer.call('backup', path=path, password=password),
-                lambda result, error: self.notice.setText('Backup saved. Keep your wallet passwords; you will need them after restoring.') if result else None)
+            self.submit(lambda: self.guard_signer(generation,'backup', path=path, password=password),
+                lambda result, error: self.notice.setText('Profile backup saved, including every address, label, contact, and payment record. Keep your profile password.') if result else None)
 
     def restore_wallet(self):
-        path, selected_filter = QFileDialog.getOpenFileName(self, 'Restore wallet', '', 'Warthog backup (*.wartbackup);;Legacy wallet database (*.db *.db3 *.sqlite)')
+        path, _ = QFileDialog.getOpenFileName(self, 'Restore into an empty profile', '', 'Wartnode profile (*.wartprofile)')
         if not path:
-            return
-        if selected_filter.startswith('Legacy'):
-            self.lock_wallet()
-            self.submit(lambda: self.signer.call('import_database', path=path),
-                lambda result,error: (self.notice.setText(f"Imported {result['added']} wallets. The original file was kept. Unlock each wallet with its original password."),self.refresh_wallets()) if result else None)
             return
         password = self.password('Restore backup', 'Backup password')
         if password is not None:
             self.lock_wallet()
             self.submit(lambda: self.signer.call('restore', path=path, password=password),
-                lambda result, error: (self.notice.setText(f"Restored {result['added']} wallets. Unlock each wallet with its original password."),self.refresh_wallets()) if result else None)
+                lambda result, error: (self.notice.setText(f"Restored {result['added']} addresses. Unlock with the profile password from this backup."),self.refresh_wallets()) if result else None)
 
     def review_payment(self, maximum=False):
         generation = self.session_generation
+        payment_generation=self.payment_generation
         recipient, amount = self.recipient.text(), self.amount.text()
         self.review_button.setEnabled(False)
 
         def reviewed(result, error):
             self.review_button.setEnabled(bool(self.address) and self.runtime.ready)
-            if not result or generation != self.session_generation or result['address'] != self.address:
+            if not result or generation != self.session_generation or payment_generation!=self.payment_generation or result['address'] != self.address:
                 return
             text = (f"Warthog\n\nFrom: {result['address']}\nTo: {result['recipient']}\n\n"
                 f"Amount: {format_wart(result['amount'])} WART\nFee: {format_wart(result['fee'])} WART\n"
                 f"Total: {format_wart(result['total'])} WART\n\nNode: {result['node']}\n\nSend this payment?")
-            answer = QMessageBox.question(self,'Review payment',text,QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.Cancel,QMessageBox.StandardButton.Cancel)
-            if answer != QMessageBox.StandardButton.Yes:
+            dialog=QMessageBox(QMessageBox.Icon.Question,'Review payment',text,
+                QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.Cancel,self)
+            dialog.setDefaultButton(QMessageBox.StandardButton.Cancel)
+            self.secret_dialogs[dialog]=lambda:dialog.setText('')
+            try:answer=dialog.exec()
+            finally:self.secret_dialogs.pop(dialog,None);dialog.deleteLater()
+            if (answer != QMessageBox.StandardButton.Yes or generation != self.session_generation
+                    or payment_generation!=self.payment_generation or result['address'] != self.address or not self.profile_unlocked):
+                self.submit(lambda:self.signer.call('cancel_review'),quiet=True)
                 return
-            password = self.password('Confirm payment', 'Wallet password')
-            if password is None:
-                return
-            self.submit(lambda: self.signer.call('send',token=result['token'],password=password),sent)
+            self.submit(lambda: self.guard_signer(generation,'send',token=result['token']),sent)
 
         def sent(result, error):
             if result:
@@ -1120,17 +1072,10 @@ class Window(QMainWindow):
                 self.notice.setText(f"{message}\nTransaction: {result['tx_hash']}")
                 self.refresh_history()
                 self.submit(lambda: self.signer.call('balance'),self.balance_loaded,quiet=True)
-        self.submit(lambda: self.signer.call('review',recipient=recipient,amount=amount,max=bool(maximum)),reviewed)
-
-    def refresh_history(self):
-        if not self.address:
-            return
-        address = self.address
-        self.submit(lambda: self.signer.call('reconcile' if self.runtime.ready else 'history',address=address),
-            lambda result,error: populate(self.history_table,[[datetime.fromtimestamp(r['timestamp'],timezone.utc).strftime('%Y-%m-%d %H:%M'),format_wart(r['amount_e8']),format_wart(r['fee_e8']),r['status'].replace('_',' ').capitalize(),r['tx_hash']] for r in result['rows']]) if result and self.address==address else None)
+        self.submit(lambda: self.guard_signer(generation,'review',recipient=recipient,amount=amount,max=bool(maximum)),reviewed)
 
     def start_miner(self):
-        if self.mining_busy or self.runtime.miner.running:return
+        if self.mining_busy or self.runtime.miner.running or self.editing_mining:return
         payout, backend, device = self.payout.text().strip(),self.backend.currentData(),self.device.currentData() or 0
         cpu,gpu=self.cpu_limit.value(),self.gpu_limit.value()
         threads=worker_threads(cpu)
@@ -1144,7 +1089,7 @@ class Window(QMainWindow):
                 settings.save(self.directory,payout_address=payout,cpu_threads=threads,gpu_device=device)
             def started(*_):
                 self.mining_busy=False;self.tick()
-            self.submit(start,started)
+            self.submit(start,started,lifecycle=True)
 
     def devices_loaded(self, result, error):
         if result:
@@ -1205,9 +1150,14 @@ class Window(QMainWindow):
         if not self.exiting:
             event.ignore()
             self.lock_wallet()
-            self.hide()
-            self.tray.showMessage('Wartnode-Desktop is still running','Your wallet is locked. Use Exit Wartnode-Desktop to close the app.')
+            if self.preferences['close_to_tray'] and QSystemTrayIcon.isSystemTrayAvailable():
+                self.hide()
+                for dialog in (self.send_dialog,self.receive_dialog,self.node_log_dialog,self.mining_log_dialog,self.mining_settings_dialog):dialog.hide()
+                self.tray.showMessage('Wartnode-Desktop is still running','Your profile is locked. Use Exit Wartnode-Desktop to close the app.')
+            else:self.exit_application()
         else:
+            QApplication.instance().removeEventFilter(self)
+            self.idle.stop()
             event.accept()
 
     def exit_application(self):

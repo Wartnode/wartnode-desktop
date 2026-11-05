@@ -39,7 +39,7 @@ class UpdateTests(unittest.TestCase):
         now=int(time.time())
         self.payload={'schema':1,'application':'wartnode','channel':'development','platform':'windows-x64',
                       'version':'0.3.0-dev.2','data_schema':updates.DATA_SCHEMA,'rollback_schema':updates.DATA_SCHEMA,'issued':now-10,'expires':now+86400,
-                      'minimum_windows_build':26100,'asset':{'url':'https://publisher.example/update.zip',
+                      'minimum_windows_build':22000,'asset':{'url':'https://publisher.example/update.zip',
                        'size':self.archive.stat().st_size,'sha256':updates.sha(self.archive)},'files':files}
         self.wallet=Path(self.temp.name)/'wallet.db';self.wallet.write_bytes(b'keys and uncertain reservation')
 
@@ -84,6 +84,22 @@ class UpdateTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'not configured'):
             updates.verify_envelope(self.envelope(),{'public_key':None},'0.3.0-dev.1')
 
+    def test_all_windows11_builds_accept_the_family_floor_and_reject_windows10(self):
+        envelope=self.envelope()
+        for build in (22000,22621,22631,26100,26200,26300,28000):
+            with self.subTest(build=build):
+                self.assertEqual(updates.verify_envelope(envelope,self.trust,'0.3.0-dev.1',build=build)['minimum_windows_build'],22000)
+        for build in (19045,21999):
+            with self.subTest(build=build),self.assertRaises(ValueError):
+                updates.verify_envelope(envelope,self.trust,'0.3.0-dev.1',build=build)
+
+    def test_newer_manifest_requirement_uses_actual_host_build_by_default(self):
+        envelope=self.envelope({**self.payload,'minimum_windows_build':26100})
+        with patch('wartnode.updates.current_windows_build',return_value=22000):
+            with self.assertRaises(ValueError):updates.verify_envelope(envelope,self.trust,'0.3.0-dev.1')
+        with patch('wartnode.updates.current_windows_build',return_value=26100):
+            self.assertEqual(updates.verify_envelope(envelope,self.trust,'0.3.0-dev.1')['minimum_windows_build'],26100)
+
     def test_rejects_unsafe_signed_paths_and_download_origins(self):
         for name in ('../evil.exe','/evil.exe','C:/evil','folder\\evil','CON.txt','file.','folder/../evil','file:stream'):
             payload=copy.deepcopy(self.payload);payload['files'][name]={'size':0,'sha256':'0'*64}
@@ -107,6 +123,7 @@ class UpdateTests(unittest.TestCase):
         with self.assertRaises(ValueError):updates.mark_healthy(self.root,'0.3.0-dev.2','wrong')
         updates.mark_healthy(self.root,'0.3.0-dev.2',journal['token'])
         self.assertTrue(updates.confirm_health(self.root,journal))
+        self.assertTrue(updates.rollback_available(self.root))
         updates.rollback(self.root)
         current=updates.active(self.root)
         self.assertEqual(current['version'],'0.3.0-dev.1')
@@ -141,6 +158,21 @@ class UpdateTests(unittest.TestCase):
         with self.assertRaises(ValueError):updates.activate_request(self.root,self.trust)
         self.assertEqual(updates.active(self.root)['version'],'0.3.0-dev.1')
 
+    def test_configured_channels_are_verified_again_during_activation(self):
+        beta={**self.trust,'channel':'beta'}
+        stable={**self.trust,'channel':'stable','manifest_url':'https://publisher.example/stable.json'}
+        trust={'channels':{'beta':beta,'stable':stable}}
+        self.assertEqual(updates.channel_policy(trust,'stable'),stable)
+        envelope=self.envelope({**self.payload,'channel':'beta'})
+        updates.prepare(self.root,envelope,beta,'0.3.0-dev.1',self.archive)
+        request=updates.read_json(self.root/'update-request.json')
+        self.assertEqual(request['channel'],'beta')
+        request['channel']='stable';atomic_json(self.root/'update-request.json',request)
+        with self.assertRaisesRegex(ValueError,'not compatible'):updates.activate_request(self.root,trust)
+        request['channel']='beta';atomic_json(self.root/'update-request.json',request)
+        updates.activate_request(self.root,trust)
+        self.assertEqual(updates.active(self.root)['version'],'0.3.0-dev.2')
+
     def test_installer_migrates_legacy_contract_but_cannot_roll_back_to_it(self):
         current=updates.read_json(self.root/'active.json');current['data_schema']=1
         atomic_json(self.root/'active.json',current)
@@ -158,6 +190,7 @@ class UpdateTests(unittest.TestCase):
         updates.mark_healthy(self.root,journal['version'],journal['token']);updates.confirm_health(self.root,journal)
         record=updates.read_json(self.root/'update-journal.json');record['previous']['data_schema']=1
         atomic_json(self.root/'update-journal.json',record)
+        self.assertFalse(updates.rollback_available(self.root))
         with self.assertRaises(ValueError):updates.rollback(self.root)
         self.assertEqual(updates.active(self.root)['version'],'0.3.0-dev.2')
 

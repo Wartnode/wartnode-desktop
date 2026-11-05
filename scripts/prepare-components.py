@@ -8,6 +8,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from wartnode import __version__
+from wartnode.fees import NODE_MINIMUM_FEE, TRANSACTION_FEE_E8
 components = ROOT / 'components'
 components.mkdir(exist_ok=True)
 
@@ -36,7 +37,8 @@ if not node_target.exists() or digest(node_source)!=digest(node_target):
 manifest = {'schema':1,'network':'mainnet','application':__version__,'components':{
     'node':{'file':'wart-node-windows.exe','repository':'https://github.com/warthog-network/core',
         'commit':'f7b9dfcd4b9dfc088894c354bf9f2eacea5e19d2','branch':'master',
-        'admission_fee_policy':'official upstream default; no minfee override',
+        'admission_fee_policy':'owner-selected managed-node minimum; upstream --minfee option',
+        'minimum_fee_wart':NODE_MINIMUM_FEE,'minimum_fee_e8':TRANSACTION_FEE_E8,
         'patches':[
             {**lock['patches'][0], 'source_file':'src/node/main.cpp',
              'patched_source_sha256':digest(ROOT/'vendor/upstream-core/src/node/main.cpp'),
@@ -55,6 +57,7 @@ manifest = {'schema':1,'network':'mainnet','application':__version__,'components
         'pipeline_sha256':digest(ROOT/'native/miner_pipeline.cpp'),
         'benchmark_sha256':digest(ROOT/'native/miner_benchmark.cpp'),
         'budget_header_sha256':digest(ROOT/'native/mining_budget.hpp'),
+        'telemetry_header_sha256':digest(ROOT/'native/miner_telemetry.hpp'),
         'engine':'WartNode in-house BRminer-derived','gpu_backend':'driver OpenCL','compiler':'clang-cl',
         'source_archive_sha256':digest(ROOT/'work/miner-source.tar'),
         'source_build_libraries':'provenance/miner-link-inputs.json',

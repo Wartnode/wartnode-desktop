@@ -1,7 +1,8 @@
 """Mining presets and validated per-miner resource ceilings."""
 import os
 
-PRESETS = {'light': 20, 'normal': 50, 'heavy': 80}
+PRESETS = {'eco': 30, 'balanced': 60, 'heavy': 90}
+LEGACY_PRESETS = {'light': 20, 'normal': 50, 'heavy': 80}
 MIN_PERCENT, MAX_PERCENT = 5, 95
 
 
@@ -13,6 +14,6 @@ def validate(cpu, gpu, mode='custom'):
 
 
 def worker_threads(cpu, cores=None):
-    validate(cpu, 50)
+    validate(cpu, 60)
     cores = max(1, cores or os.cpu_count() or 1)
     return max(1, (cores * cpu + 99) // 100)

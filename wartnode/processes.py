@@ -14,6 +14,8 @@ import threading
 import time
 from .paths import verified_component
 from .settings import chain_directory, resume_move, move_chain, storage_info
+from .fees import NODE_MINIMUM_FEE
+from .dashboard import MinerSample
 
 
 def serialized(function):
@@ -63,9 +65,11 @@ class OwnedProcess:
         self.process = None
         self.lines = collections.deque(maxlen=250)
         self.metrics = {}
+        self.sample = None
         self.stopping = False
         self.job = None
         self.rpc_ready_at = float('inf')
+        self.started_at = None
         self.operation_lock = threading.RLock()
 
     @property
@@ -83,6 +87,7 @@ class OwnedProcess:
         self.cwd = Path(cwd).resolve()
         self.lines.clear()
         self.metrics = {}
+        self.sample = None
         self.rpc_ready_at = float('inf')
         environment = {k: v for k, v in os.environ.items() if not k.startswith(("BRMINER_", "WART_", "CONNECTCOIN_"))}
         environment["LOCALAPPDATA"] = str(self.directory / "runtime")
@@ -92,13 +97,22 @@ class OwnedProcess:
             ctypes.WinDLL('kernel32').CloseHandle(ctypes.c_void_p(self.job))
             self.job=None
         self.job = guard_process(self.process,cpu_limit=cpu_limit)
+        self.started_at = time.monotonic()
         process = self.process
+        self.sample=None;self.metrics={};self.lines.clear()
 
         def read():
             with log.open("a", encoding="utf-8") as stream:
                 for raw in iter(process.stdout.readline, b""):
+                    if self.process is not process:break
                     line = raw.decode("utf-8", "replace").rstrip()[:4096]
                     self.lines.append(line)
+                    if line.startswith('WARTNODE_METRICS '):
+                        try:
+                            sample=MinerSample.from_wire(line[len('WARTNODE_METRICS '):])
+                            if self.process is process:self.sample=sample
+                        except ValueError:
+                            pass
                     if 'RPC endpoint is ' in line:self.rpc_ready_at = time.monotonic()+.5
                     stream.write(line + "\n")
                     stream.flush()
@@ -108,7 +122,8 @@ class OwnedProcess:
                     if "BRMINER_METRICS " in line:
                         try:
                             values = line.split("BRMINER_METRICS ", 1)[1].split()
-                            self.metrics = {key:float(value) for key,value in (token.split("=",1) for token in values if "=" in token)}
+                            metrics = {key:float(value) for key,value in (token.split("=",1) for token in values if "=" in token)}
+                            if self.process is process:self.metrics=metrics
                         except (ValueError, TypeError):
                             pass
         threading.Thread(target=read, daemon=True).start()
@@ -140,6 +155,7 @@ class Runtime:
         self.miner = OwnedProcess("miner", directory)
         self.ready = False
         self.checked = 0
+        self.lite_connected_at = None
         self.state = {"state": "Stopped", "height": 0, "peers": 0}
         self.operation_lock = threading.RLock()
         self.closed = False
@@ -179,6 +195,7 @@ class Runtime:
         config.write_text('# Managed by Wartnode-Desktop.\n', encoding='utf-8')
         self.node.start([verified_component("node"), "--rpc=127.0.0.1:19400", "--stratum=127.0.0.1:19456",
             "--bind=127.0.0.1:19187", "--chain-db=chain.db3", "--peers-db=peers.db3",
+            "--minfee="+NODE_MINIMUM_FEE,
             "--config="+str(config.resolve()),
             "--connect=45.79.140.195:9186,193.70.81.165:9186,139.99.16.105:9186"], chain)
 
@@ -194,8 +211,10 @@ class Runtime:
                 remote.require_network()
                 head=remote.head(require_synced=True)
                 self.ready=True;self.checked=time.monotonic()
+                if self.lite_connected_at is None:self.lite_connected_at=self.checked
                 self.state={'state':'Connected','height':head['height'],'peers':0,'head':head,'checked':self.checked,'mode':'lite'}
             except ValueError as error:
+                self.lite_connected_at=None
                 self.state={'state':'Service unavailable','height':0,'peers':0,'mode':'lite','error':str(error)}
             return self.state
         if not self.node.running:
@@ -249,7 +268,7 @@ class Runtime:
         return json.loads(result.stdout)
 
     @serialized
-    def start_miner(self, payout, threads, backend, device=0, *, cpu_limit=50, gpu_limit=50):
+    def start_miner(self, payout, threads, backend, device=0, *, cpu_limit=60, gpu_limit=60):
         if self.closed:
             raise ValueError('Application is shutting down')
         from . import settings
@@ -351,6 +370,7 @@ class Runtime:
         if self.node.running or self.miner.running:raise ValueError('Owned processes have not stopped')
         value=settings.load(self.directory)
         self.ready=False;self.state={'state':'Stopped','height':0,'peers':0}
+        self.lite_connected_at=None
         return settings.save(self.directory,connection_mode=mode,connection_revision=value['connection_revision']+1)
 
 
@@ -364,36 +384,67 @@ class SignerClient:
         self.counter = 0
 
         def read():
-            for line in iter(self.process.stdout.readline, b""):
-                try:
-                    self.responses.put(json.loads(line), timeout=1)
-                except (ValueError, queue.Full):
-                    self.process.kill()
-                    break
-        threading.Thread(target=read, daemon=True).start()
-
-    def call(self, action, **args):
-        with self.lock:
-            self.counter += 1
-            request = {"id": self.counter, "action": action, "args": args}
-            self.process.stdin.write((json.dumps(request) + "\n").encode())
-            self.process.stdin.flush()
             try:
-                response = self.responses.get(timeout=40)
-            except queue.Empty as exc:
-                self.process.kill()
-                raise ValueError("Wallet operation timed out. Restart the application; any saved payment remains reserved.") from exc
-            if response.get("id") != self.counter:
-                self.process.kill()
-                raise ValueError("Wallet protocol mismatch")
-            if "error" in response:
-                raise ValueError(response["error"])
-            return response["result"]
+                for line in iter(self.process.stdout.readline, b""):
+                    try:
+                        self.responses.put(json.loads(line), timeout=1)
+                    except (ValueError, queue.Full):
+                        self.process.kill()
+                        break
+            finally:
+                try:self.responses.put_nowait({'closed':True})
+                except queue.Full:pass
+        self.reader=threading.Thread(target=read, daemon=True)
+        self.reader.start()
+
+    def call(self, action, _valid=None, **args):
+        with self.lock:
+            if _valid is not None and not _valid():return None
+            result=self._exchange(action,args)
+            if _valid is not None and not _valid():
+                # Keep the transport lock until the helper has discarded the
+                # stale authorization. A later unlock cannot overtake this lock.
+                self._exchange('lock',{})
+                return None
+            return result
+
+    def _exchange(self,action,args):
+        """Caller holds self.lock across the complete request/response."""
+        if self.process.poll() is not None:
+            raise ValueError('The signing helper stopped. Restart Wartnode-Desktop; saved payments remain reserved.')
+        self.counter += 1
+        request = {"id": self.counter, "action": action, "args": args}
+        self.process.stdin.write((json.dumps(request) + "\n").encode())
+        self.process.stdin.flush()
+        try:
+            response = self.responses.get(timeout=40)
+        except queue.Empty as exc:
+            self.process.kill()
+            raise ValueError("Wallet operation timed out. Restart the application; any saved payment remains reserved.") from exc
+        if response.get('closed') is True:
+            raise ValueError('The signing helper stopped. Restart Wartnode-Desktop; saved payments remain reserved.')
+        if response.get("id") != self.counter:
+            self.process.kill()
+            raise ValueError("Wallet protocol mismatch")
+        if "error" in response:
+            raise ValueError(response["error"])
+        return response["result"]
 
     def close(self):
-        if self.process.poll() is None:
-            self.process.stdin.close()
-            try:
-                self.process.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
+        try:
+            try:self.process.stdin.close()
+            except OSError:pass  # A crashed helper can leave buffered pipe data.
+            if self.process.poll() is None:
+                try:self.process.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    self.process.kill();self.process.wait(timeout=3)
+        finally:
+            reader=getattr(self,'reader',None)
+            if reader:reader.join(timeout=2)
+            for stream in (self.process.stdout,self.process.stderr):
+                if stream:
+                    try:stream.close()
+                    except OSError:pass
+            if self.job and os.name=='nt':
+                ctypes.WinDLL('kernel32').CloseHandle(ctypes.c_void_p(self.job))
+                self.job=None

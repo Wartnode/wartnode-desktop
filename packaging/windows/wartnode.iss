@@ -1,3 +1,6 @@
+#ifndef MinimumWindowsBuild
+  #error Build through scripts/build-installer.ps1 to select the shared Windows policy
+#endif
 #ifndef AppVersion
   #error AppVersion is required
 #endif
@@ -25,7 +28,7 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64os
 ArchitecturesInstallIn64BitMode=x64os
-MinVersion=10.0.26100
+MinVersion=10.0.{#MinimumWindowsBuild}
 OutputDir=..\..\dist
 OutputBaseFilename=Wartnode-Desktop-{#AppVersion}-windows-x64-setup
 WizardStyle=modern
@@ -67,9 +70,9 @@ function InitializeSetup: Boolean;
 var Version: TWindowsVersion;
 begin
   GetWindowsVersionEx(Version);
-  Result := (Version.ProductType = VER_NT_WORKSTATION) and (Version.Build >= 26100) and IsX64OS;
+  Result := (Version.ProductType = VER_NT_WORKSTATION) and (Version.Build >= {#MinimumWindowsBuild}) and IsX64OS;
   if not Result then
-    SuppressibleMsgBox('Wartnode-Desktop requires Windows 11 x64 (24H2 or later). ARM and Windows Server are not supported.', mbCriticalError, MB_OK, IDOK);
+    SuppressibleMsgBox('Wartnode-Desktop requires Windows 11 x64 (build {#MinimumWindowsBuild} or newer). ARM and Windows Server are not supported.', mbCriticalError, MB_OK, IDOK);
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;

@@ -27,3 +27,4 @@ vendor/brminer/
 vendor/wart_dapp/
 vendor/connectcoin/
 vendor/janusminer/
+*.wartprofile

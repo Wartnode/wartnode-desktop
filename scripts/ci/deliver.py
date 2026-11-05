@@ -83,7 +83,7 @@ def deliver(root):
     hashes = {}
     with zipfile.ZipFile(source_zip, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for name, path in sorted(sources.items()):
-            if name.startswith(('.git/', 'work/', 'dist/')) or path.suffix.lower() in ('.db', '.db3', '.wartbackup', '.exe', '.lib', '.obj', '.key', '.pem', '.dpapi', '.wartkeys', '.pfx', '.p12'):
+            if name.startswith(('.git/', 'work/', 'dist/')) or path.suffix.lower() in ('.db', '.db3', '.wartbackup', '.wartprofile', '.exe', '.lib', '.obj', '.key', '.pem', '.dpapi', '.wartkeys', '.pfx', '.p12'):
                 raise ValueError('Disallowed source payload: ' + name)
             if name.startswith(('evidence/', 'provenance/', 'work/', 'dist/')):
                 raise ValueError('Collected test data is not public source: ' + name)

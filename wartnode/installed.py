@@ -71,6 +71,8 @@ def uninstall_versions(root):
     """Remove inventoried application files only; leave unknown files and all data."""
     root=Path(root).resolve()
     with updates.install_lock(root):
+        from .desktop_preferences import remove_startup_for_installation
+        remove_startup_for_installation(root)
         if (root/'active.json').exists():updates.active(root,allow_legacy=True)
         versions=root/'versions'
         for folder in versions.iterdir():

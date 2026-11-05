@@ -54,6 +54,7 @@ class TransportTests(unittest.TestCase):
         self.thread.start()
         self.temp=tempfile.TemporaryDirectory()
         self.signer=Signer(self.temp.name,rpc=f'http://127.0.0.1:{self.server.server_port}')
+        self.signer.call('setup',{'password':'synthetic-password'})
         self.signer.call('import',{'kind':'private','secret':'00'*31+'01','password':'synthetic-password'})
     def tearDown(self):
         self.signer.store.con.close()

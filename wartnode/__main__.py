@@ -60,7 +60,7 @@ def main():
         from .signer import serve
         serve(args.signer)
         return 0
-    from PySide6.QtWidgets import QApplication, QMessageBox
+    from PySide6.QtWidgets import QApplication, QMessageBox, QFileDialog
     from PySide6.QtCore import QLockFile
     from .ui import Window
     from .theme import apply
@@ -73,7 +73,23 @@ def main():
     if not compatibility['supported']:
         QMessageBox.critical(None,'Windows version not supported',compatibility['reason'])
         return 1
-    directory = data_root(args.data_dir)
+    from .desktop_preferences import remembered_profile,remember_profile
+    directory = data_root(args.data_dir or remembered_profile())
+    selected_fresh=False
+    from .profile import guard_profile
+    while True:
+        try:
+            guard_profile(directory/'wallet.db')
+            break
+        except ValueError as error:
+            QMessageBox.information(None,'Choose a fresh profile',str(error))
+            chosen=QFileDialog.getExistingDirectory(None,'Choose a fresh Wartnode profile folder')
+            if not chosen:return 1
+            directory=data_root(chosen)
+            selected_fresh=True
+    if selected_fresh and not args.data_dir:
+        try:remember_profile(directory)
+        except OSError:QMessageBox.information(None,'Profile location','Windows could not remember this profile folder. Open it next time with --data-dir "'+str(directory)+'".')
     lock = QLockFile(str(directory/'desktop.lock'))
     lock.setStaleLockTime(0)
     if not lock.tryLock(100):
@@ -103,6 +119,9 @@ def main():
         QMessageBox.critical(None,'Wartnode-Desktop could not start',str(exc))
         return 1
     window.show()
+    if not args.smoke_seconds:
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(0,window.onboard_profile)
     if args.smoke_seconds:
         from PySide6.QtCore import QTimer
         QTimer.singleShot(max(1,min(args.smoke_seconds,300))*1000,window.exit_application)

@@ -16,6 +16,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from wartnode import __version__,installed,updates
 from wartnode.processes import hidden_options
+from wartnode.preflight import MINIMUM_WINDOWS_BUILD
 
 
 def build(version='0.4.0-dev.1'):
@@ -53,6 +54,7 @@ def build(version='0.4.0-dev.1'):
     numeric=version.replace('-dev.','.')
     with (logs/'upgrade-fixture-installer.log').open('w',encoding='utf-8') as log:
         subprocess.run([str(compiler),'--define=AppVersion='+version,'--define=FileVersion='+numeric,
+                        '--define=MinimumWindowsBuild='+str(MINIMUM_WINDOWS_BUILD),
                         '--define=BundleDir='+str(bundle),'--output-dir='+str(folder/'dist'),
                         str(ROOT/'packaging/windows/wartnode.iss')],cwd=ROOT,stdout=log,stderr=subprocess.STDOUT,
                        check=True,timeout=180,**hidden_options())

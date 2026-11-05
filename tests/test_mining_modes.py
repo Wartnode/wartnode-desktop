@@ -13,11 +13,11 @@ from wartnode.processes import Runtime
 from wartnode.process_guard import guard_process
 
 class MiningPolicyTests(unittest.TestCase):
-    def test_existing_profiles_default_to_normal_without_reusing_old_thread_count(self):
+    def test_existing_profiles_keep_their_limits_without_reusing_old_thread_count(self):
         with tempfile.TemporaryDirectory() as directory:
             atomic_json(Path(directory)/'settings.json',{'schema':1,'cpu_threads':1})
             value=settings.load(directory)
-            self.assertEqual((value['mining_mode'],value['cpu_limit'],value['gpu_limit']),('normal',50,50))
+            self.assertEqual((value['mining_mode'],value['cpu_limit'],value['gpu_limit']),('custom',50,50))
             self.assertEqual(mining.worker_threads(50,16),8)
             self.assertEqual(mining.worker_threads(5,4),1)
             self.assertEqual(mining.worker_threads(95,16),16)

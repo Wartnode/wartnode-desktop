@@ -60,12 +60,14 @@ class ProductUITests(unittest.TestCase):
     def test_settings_text_remains_readable_in_a_small_window(self):
         self.window.resize(980,680)
         self.window.nav_buttons[5].click()
+        self.window.settings_categories.setCurrentRow(2)
         APP.processEvents()
         status=self.window.storage_status
         self.assertGreaterEqual(status.height(),status.heightForWidth(status.width()))
         self.assertGreaterEqual(status.height(),status.minimumSizeHint().height())
         page=self.window.stack.currentWidget()
-        self.assertGreater(page.verticalScrollBar().maximum(),0)
+        # Compact settings may fit without scrolling; overflowing content must be reachable.
+        self.assertLessEqual(page.widget().height(),page.viewport().height()+page.verticalScrollBar().maximum())
         page.ensureWidgetVisible(status)
         APP.processEvents()
         self.assertTrue(status.isVisible())
@@ -82,6 +84,7 @@ class ProductUITests(unittest.TestCase):
                 self.assertLessEqual(other.width()+16,width)
                 self.assertLessEqual(other.height()+32,height)
                 other.navigate(5)
+                other.settings_categories.setCurrentRow(2)
                 until(lambda:not other.tasks)
                 page=other.stack.currentWidget()
                 page.ensureWidgetVisible(other.storage_status);APP.processEvents()
@@ -121,9 +124,11 @@ class ProductUITests(unittest.TestCase):
     def test_contact_and_explorer_links_keep_full_identifiers(self):
         from wartnode.compat import wallet_utils
         address,_=wallet_utils.wallet_from_pkhex('00'*31+'01')
-        settings.save_contact(self.directory,'Recipient',address)
-        with patch('wartnode.ui.QInputDialog.getItem',return_value=('Recipient · '+address,True)):
-            self.window.choose_contact()
+        self.window.signer.call('setup',password='synthetic-profile-password')
+        self.window.signer.call('save_contact',name='Recipient',address=address)
+        self.window.refresh_wallets();until(lambda:not self.window.tasks)
+        with patch('wartnode.wallet_ui.QInputDialog.getItem',return_value=('Recipient · '+address,True)):
+            self.window.choose_profile_contact()
         self.assertEqual(self.window.recipient.text(),address)
         with patch.object(self.window,'search_explorer') as search:
             self.window.explore_value(address)
@@ -133,9 +138,9 @@ class ProductUITests(unittest.TestCase):
 
     def test_mining_presets_overrides_and_persistence(self):
         window=self.window
-        self.assertEqual(window.mining_mode.currentData(),'normal')
-        self.assertEqual((window.cpu_limit.value(),window.gpu_limit.value()),(50,50))
-        for mode,percent in (('light',20),('heavy',80),('normal',50)):
+        self.assertEqual(window.mining_mode.currentData(),'balanced')
+        self.assertEqual((window.cpu_limit.value(),window.gpu_limit.value()),(60,60))
+        for mode,percent in (('eco',30),('heavy',90),('balanced',60)):
             window.mining_mode.setCurrentIndex(window.mining_mode.findData(mode))
             self.assertEqual((window.cpu_limit.value(),window.gpu_limit.value()),(percent,percent))
         window.cpu_limit.setValue(5);window.gpu_limit.setValue(95)

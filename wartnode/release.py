@@ -9,6 +9,7 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from . import updates
 from .paths import asset_root,atomic_json
+from .preflight import MINIMUM_WINDOWS_BUILD, current_windows_build
 
 DOMAIN=b'WARTNODE-DESKTOP-RELEASE-V1\x00'
 REPOSITORY='Wartnode/wartnode-desktop'
@@ -54,7 +55,7 @@ def release_purpose(version, channel):
     raise ValueError('The release version does not match its channel')
 
 
-def verify(envelope,trust, *, now=None,highest=None,build=26100):
+def verify(envelope,trust, *, now=None,highest=None,build=None):
     try:
         if not isinstance(envelope,dict) or set(envelope)!={'payload','signature'}:raise ValueError()
         raw=base64.b64decode(envelope['payload'],validate=True);signature=base64.b64decode(envelope['signature'],validate=True)
@@ -79,7 +80,9 @@ def verify(envelope,trust, *, now=None,highest=None,build=26100):
             or payload['issued']>now+300 or payload['expires']<=now or payload['expires']<=payload['issued']
             or payload['expires']-payload['issued']>31*86400):
         raise ValueError('The release information has expired or its date is invalid')
-    if type(payload.get('minimum_windows_build')) is not int or not 26100<=payload['minimum_windows_build']<=build:
+    if build is None:build=current_windows_build()
+    if (type(build) is not int or type(payload.get('minimum_windows_build')) is not int
+            or not MINIMUM_WINDOWS_BUILD<=payload['minimum_windows_build']<=build):
         raise ValueError('This release requires a newer Windows 11 build')
     expected_names=names(payload.get('version'))
     if highest is not None and updates.version_key(payload['version'])<=updates.version_key(highest):

@@ -58,7 +58,7 @@ class NodeRPC:
         if not path.startswith("/") or ".." in path or any(c in path for c in "?#\\"):
             raise NodeError("Invalid node request path")
         if self.remote:
-            read_route=(path in ('/chain/head','/transaction/minfee') or re.fullmatch(
+            read_route=(path in ('/chain/head','/transaction/minfee','/chain/hashrate/100') or re.fullmatch(
                 r'/chain/block/(?:[1-9][0-9]{0,9}|[a-fA-F0-9]{64})(?:/header)?|/account/[a-fA-F0-9]{48}/(?:balance|history/[0-9]{1,19})',path))
             if not (read_route and payload is None or path=='/transaction/add' and isinstance(payload,dict)):
                 raise NodeError('This operation is unavailable in Lite mode')
@@ -92,7 +92,7 @@ class NodeRPC:
 
     def head(self, require_synced=False):
         head = self.request("/chain/head")
-        if (not isinstance(head, dict) or "chainHead" in head or type(head.get("height")) is not int
+        if (not isinstance(head, dict) or "chainHead" in head or type(head.get("height")) is not int or not 0<=head['height']<=0xffffffff
                 or not HEX64.fullmatch(str(head.get("hash", "")))
                 or type(head.get("synced")) is not bool):
             raise NodeError("Unsupported chain head")

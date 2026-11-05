@@ -131,6 +131,7 @@ class SignerTests(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory()
         self.signer=Signer(self.temp.name)
         self.password='synthetic-test-password'
+        self.signer.call('setup',{'password':self.password})
         self.signer.call('import',{'secret':'00'*31+'01','kind':'private','password':self.password})
         FakeRPC.fee,FakeRPC.result,FakeRPC.broadcasts=9992,'pending',0
 
@@ -143,17 +144,17 @@ class SignerTests(unittest.TestCase):
         self.signer.call('lock',{})
         with self.assertRaises(ValueError):self.signer.call('unlock',{'address':OWNER,'password':'wrong password'})
         self.signer.call('unlock',{'address':OWNER,'password':self.password})
-        backup=Path(self.temp.name)/'wallet.wartbackup'
-        self.signer.call('backup',{'path':str(backup),'password':'backup password'})
+        backup=Path(self.temp.name)/'wallet.wartprofile'
+        self.signer.call('backup',{'path':str(backup),'password':self.password})
         with tempfile.TemporaryDirectory() as directory:
             restored=Signer(directory)
             try:
-                restored.call('restore',{'path':str(backup),'password':'backup password'})
+                restored.call('restore',{'path':str(backup),'password':self.password})
                 self.assertEqual(restored.call('unlock',{'address':OWNER,'password':self.password})['address'],OWNER)
             finally:restored.store.con.close()
 
     def test_polling_does_not_prevent_autolock(self):
-        self.signer.last_active=time.monotonic()-301
+        self.signer.last_active=time.monotonic()-901
         self.assertIsNone(self.signer.call('list',{})['address'])
 
     def review(self,maximum=False):

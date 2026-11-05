@@ -10,6 +10,7 @@
 #include "warthog_pow.hpp"
 #include "warthog_benchmark.hpp"
 #include "mining_budget.hpp"
+#include "miner_telemetry.hpp"
 
 #include <crypto/sha256.h>
 #include <univalue.h>
@@ -1115,6 +1116,7 @@ static int runEngine(std::string_view payout_address, std::string_view thread_se
 	}
 	const std::string backend{"OpenCL"};
 	state.console.start(backend, thread_count, benchmark_telemetry || benchmark, benchmark && benchmark->quiet);
+	const auto telemetry_session=std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
 	NvidiaMonitor monitor;
 	if (benchmark_result) {
 		benchmark_result->backend = backend;
@@ -1200,6 +1202,7 @@ static int runEngine(std::string_view payout_address, std::string_view thread_se
 			state.rejected_shares.load(std::memory_order_relaxed),
 			state.accepted_blocks.load(std::memory_order_relaxed)};
 		stats.gpus = monitor.sample();
+		if (!benchmark) state.console.diagnostic("WARTNODE_METRICS "+dashboardTelemetry(stats,telemetry_session,gpu_devices,selected_devices.front()));
 		if (!benchmark) state.console.update(stats);
 		else {
 			const double start{std::chrono::duration<double>(last_sample - run_start).count()};

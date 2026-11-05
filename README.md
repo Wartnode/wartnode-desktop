@@ -2,7 +2,7 @@
 
 A Warthog wallet, explorer, full node and solo miner for Windows 11.
 
-[Download the beta](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.4.0-beta.1) · [User guide](docs/MVP_GUIDE.md) · [Build from source](docs/BUILD.md) · [Report an issue](https://github.com/Wartnode/wartnode-desktop/issues/new/choose)
+[Download the beta](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.5.0-beta.1) · [User guide](docs/MVP_GUIDE.md) · [Build from source](docs/BUILD.md) · [Report an issue](https://github.com/Wartnode/wartnode-desktop/issues/new/choose)
 
 Wartnode-Desktop supports two connection modes. **Lite wallet** connects to
 `mainnet.wartnode.com` without downloading the blockchain. **Full node** stores
@@ -12,7 +12,7 @@ node nor a miner.
 
 ## Requirements
 
-- Windows 11 x64, version 24H2 or later, build 26100 or newer.
+- Windows 11 x64, starting with 21H2/build 22000. All Windows 11 feature releases are targeted; see [compatibility and tested coverage](docs/WINDOWS_COMPATIBILITY.md).
 - An internet connection for synchronization and live wallet/explorer data.
 - For solo mining: a supported CPU and GPU together, with an OpenCL-capable
   graphics driver. Python, Git, Docker and the CUDA Toolkit are not required to
@@ -28,15 +28,16 @@ Download files from this repository's [Releases page](https://github.com/Wartnod
 
 | Download | Use |
 | --- | --- |
-| `Wartnode-Desktop-0.4.0-beta.1-windows-x64-setup.exe` | Per-user installation with a Start menu shortcut. |
-| `Wartnode-Desktop-0.4.0-beta.1-windows-x64.zip` | Portable application; extract the complete folder and run `WartNode.exe`. |
-| `Wartnode-Desktop-0.4.0-beta.1-source.zip` | Matching application source, locked upstream inputs and build recipes. |
+| `Wartnode-Desktop-0.5.0-beta.1-windows-x64-setup.exe` | Per-user installation with a Start menu shortcut. |
+| `Wartnode-Desktop-0.5.0-beta.1-windows-x64.zip` | Portable application; extract the complete folder and run `WartNode.exe`. |
+| `Wartnode-Desktop-0.5.0-beta.1-source.zip` | Matching application source, locked upstream inputs and build recipes. |
 | `SHA256SUMS` and signed manifests | Download integrity and project-signature verification. |
 
 1. Download the installer and review the [verification instructions](docs/RELEASE_SIGNING.md).
 2. Run the installer. Administrator access is not required.
 3. Open **Wartnode-Desktop** from the Start menu.
-4. Choose a connection mode and create, import or restore a wallet.
+4. Set one profile password, then create or import your addresses under **Wallet**.
+5. Choose Full node or Lite on **Node**.
 
 The beta installer has project-controlled signatures in its accompanying
 manifests; it does not have a Windows Authenticode publisher certificate.
@@ -57,7 +58,7 @@ For the portable version, keep `_internal` and `WartNodeHelper.exe` beside
 
 ### Lite wallet
 
-Open **Settings → Storage → Connection**, select **Lite wallet**, then choose
+Open **Node**, select **Lite wallet**, then choose
 **Apply connection**. The application uses the hosted node at
 `mainnet.wartnode.com` and the Wartnode explorer service. These services can see
 queried public addresses and provide chain data; Lite mode does not independently
@@ -76,47 +77,75 @@ and database integrity, then copies it without changing the original. Import
 requires trust in the file's source; these checks do not independently replay
 all imported history. The node remains stopped until you start it.
 
-## Use the wallet
+## Dashboard and wallet
 
-- **Create or restore:** open **Wallet** to create a wallet, import a private key
-  or recovery phrase, or restore an encrypted backup. Record new recovery words
-  offline and keep encrypted backups and their passwords separately.
-- **Receive:** choose **Receive** to copy your address or display its QR code.
-- **Send:** enter the recipient and amount, then choose **Review payment**. Check
-  the address, amount and fee before entering the wallet password.
-- **Send Max:** sends the available balance after fees and funds reserved for
-  other payments.
-- **Check a payment:** use **Payments**. An uncertain submission stays reserved
-  and is not retried automatically; check its status before sending again.
+Overview shows the current connection status, combined available WART across your
+owned addresses after payment reservations, mining performance, network statistics
+and profile activity. Difficulty uses GH/TH; its exact value is available in a tooltip.
+Node provides Full/Lite selection, chain/resource statistics and a separate log window.
 
-See the [user guide](docs/MVP_GUIDE.md) for backup restoration, contacts, payment
-states and recovery procedures. Never include recovery words, private keys,
-wallet passwords or wallet databases in an issue report.
+- **One profile password:** set it on first use, then unlock once to create/import
+  multiple addresses or send. Each new address has its own recovery words.
+- **Organize:** label owned addresses, choose a default or mining payout, and keep
+  saved recipients in **Wallet → Address book**.
+- **Receive:** select an address to copy it or display its QR code. Public address
+  information and recorded balances remain viewable while the profile is locked.
+- **Send:** choose the source address and recipient, then review the amount,
+  **0.00009992 WART** fee and total before confirming. A backend requiring a higher
+  fee is refused with an explanation. Combined profile funds do not mean a single
+  transaction can spend multiple source addresses.
+- **Send Max:** deducts the fee and funds reserved for other payments.
+- **Activity:** uncertain payments stay reserved and are never retried automatically.
+  Incoming transfers and rewards are reconciled against canonical blocks.
+- **Back up profile:** an encrypted .wartprofile backup covers every address,
+  label, contact and durable payment record. Restore into an empty profile.
+
+### Upgrading from 0.4.0-beta.1
+
+This beta introduces a fresh shared-password profile. **There is no automatic wallet
+migration or legacy backup importer.** Before upgrading, preserve your existing
+backup and export the recovery phrases/private keys using the original application.
+The new app leaves the old database untouched and asks you to choose a fresh folder.
+Import your addresses manually, verify them against your originals, then create a new
+profile backup. Compatible repair/reinstall preserves the new profile; rollback to
+an older data format is blocked.
+
+See the [user guide](docs/MVP_GUIDE.md) for password changes, backups, payment
+states and recovery. Never include recovery words, private keys, wallet passwords
+or wallet databases in an issue report.
 
 ## Solo mining
 
 Solo mining requires Full node mode and a ready managed local node. Select your
-payout address and GPU under **Mine**, choose a resource mode, then select
+payout address and GPU in the **Mine → Settings** popup, choose a resource mode, then select
 **Start mining**. Mining uses the CPU and GPU together; there is no CPU-only
 mode, pool option or developer-fee redirection.
 
 | Mode | CPU limit | GPU activity limit |
 | --- | --- | --- |
-| Light | 20% | 20% |
-| Normal — default | 50% | 50% |
-| Heavy | 80% | 80% |
+| Eco | 30% | 30% |
+| Balanced — default | 60% | 60% |
+| Heavy | 90% | 90% |
 | Custom | 5–95% | 5–95% |
 
 CPU limits apply to the miner process. GPU limits pace mining work; observed
-utilization depends on the hardware and workload. Stop mining before changing
-these settings. The application does not alter drivers, clocks or voltages.
+utilization depends on the hardware and workload. Preset buttons open a review
+popup; Apply and restart stops a running miner before changing its configuration.
+Existing saved limits retain their original values as Custom. The application does
+not alter drivers, clocks or voltages.
+
+Mine emphasizes hashrate charts, session statistics, supported CPU/GPU telemetry and
+chain-confirmed rewards for the selected payout address across sessions. Missing
+sensors show unavailable; partial reward coverage is labeled. Accepted miner work
+is separate from confirmed blocks. The mining console opens in its own window.
 
 ## Explorer
 
-Search by block height, block hash, transaction hash or address. Open linked
-records to inspect transfers, confirmations and mining rewards. The explorer
-queries the selected backend on demand and keeps a bounded cache; it does not
-build another full-chain index. Offline results cover only cached records.
+Browse the latest 25 blocks, newest first, with Pause/Resume and stable selection.
+Search by height, block hash, transaction hash or address. Open wartnode.com with
+the website button; double-click a height to open its block there. A labeled action
+also supports keyboard navigation. Offline results identify their cached scope.
+The bounded cache does not build another full-chain index.
 
 ## Data, updates and closing
 
@@ -124,11 +153,13 @@ Wallets, settings and payment history are stored in `%LOCALAPPDATA%\WartNode`.
 Blockchain storage can be placed in a separate directory during initialization.
 Uninstalling the application preserves these data files.
 
-Use **Exit Wartnode-Desktop** before installing an update or repairing the
-application. Closing the window locks the wallet and leaves the application in
-the tray. Explicit Exit stops its managed node and miner.
+Settings groups General, Security, Storage, Updates and About into compact rows.
+Startup launch is opt-in and starts no node/miner. Configure the start page,
+Dark/System appearance, balance privacy and automatic lock period. Closing locks
+the profile and follows your tray preference; explicit Exit stops owned processes.
+Use **Exit Wartnode-Desktop** before installing an update or repairing the app.
 
-Automatic update discovery is disabled for this first beta. Download a newer
+Automatic update discovery is disabled for this beta. Download a newer
 installer from Releases to upgrade. See [release verification](docs/RELEASE_SIGNING.md)
 and the [user guide](docs/MVP_GUIDE.md) before changing versions.
 

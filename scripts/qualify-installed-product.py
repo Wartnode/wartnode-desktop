@@ -23,7 +23,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT));sys.path.insert(0,str(ROOT/'tests'))
 from wartnode import __version__,installed,updates
 from wartnode.paths import atomic_json
-from wartnode.preflight import windows_compatibility
+from wartnode.preflight import windows_compatibility,MINIMUM_WINDOWS_BUILD
 from wartnode.processes import hidden_options,guard_process
 from test_payment_transport import Handler,OWNER,OTHER
 
@@ -32,7 +32,7 @@ def run(command,log,expected=0,cwd=None,env=None):
     with log.open('w',encoding='utf-8') as output:
         result=subprocess.run([str(c) for c in command],stdout=output,stderr=subprocess.STDOUT,
                               timeout=180,cwd=cwd,env=env,**hidden_options())
-    if expected==0 and result.returncode!=0:raise RuntimeError('Command failed; see '+str(log))
+    if expected==0 and result.returncode!=0:raise RuntimeError('Command failed with exit code '+str(result.returncode)+'; see '+str(log))
     if expected!=0 and result.returncode==0:raise RuntimeError('A refused operation succeeded; see '+str(log))
     return result.returncode
 
@@ -81,19 +81,57 @@ def main():
         'funds_used':False,'live_chain_submission':False,'scenarios':[]}
     def scenario(name):record['scenarios'].append(name);print(name,flush=True)
     def setup(path,name,refuse=False):
-        return run([path,'/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/DIR='+str(root),
-                    '/LOG='+str(log_folder/(name+'-inno.log'))],log_folder/(name+'.log'),expected=1 if refuse else 0)
+        try:
+            return run([path,'/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/DIR='+str(root),
+                        '/LOG='+str(log_folder/(name+'-inno.log'))],log_folder/(name+'.log'),expected=1 if refuse else 0)
+        except RuntimeError:
+            version=base_version if path==base_installer else __version__
+            diagnostic={'scenario':name,'root_launcher_exists':(root/'WartNode.exe').is_file(),
+                'root_files':[p.name for p in root.iterdir()] if root.exists() else []}
+            try:
+                installed.verify_bundle(root/'versions'/version,version)
+                diagnostic['bundle_verified']=True
+            except Exception as error:diagnostic['bundle_error']=str(error)
+            record['installer_failure_diagnostic']=diagnostic
+            raise
     def uninstall(name):
-        run([root/'unins000.exe','/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART'],log_folder/(name+'.log'))
+        # Inno's original EXE exits before its temporary clone finishes. Waiting
+        # for that PID or its removal races the next setup's initialization.
+        # Start-Process -Wait waits for the whole owned process tree, including
+        # the clone. Keep the real exit status and normal removal assertions.
+        # https://jrsoftware.org/ishelp/topic_uninstexitcodes.htm
+        def quote(value):return "'"+str(value).replace("'","''")+"'"
+        args=subprocess.list2cmdline(['/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',
+                                     '/LOG='+str(log_folder/(name+'-inno.log'))])
+        script=("$ErrorActionPreference='Stop'; $uninstallProcess=Start-Process -FilePath "+
+                quote(root/'unins000.exe')+' -ArgumentList '+quote(args)+
+                ' -WindowStyle Hidden -Wait -PassThru; exit $uninstallProcess.ExitCode')
+        encoded=base64.b64encode(script.encode('utf-16le')).decode('ascii')
+        run([shutil.which('pwsh'),'--NoProfile','-EncodedCommand',encoded],log_folder/(name+'.log'))
         wait_for(lambda:not (root/'unins000.exe').exists())
+        uninstall_log=(log_folder/(name+'-inno.log')).read_text(encoding='utf-8-sig')
+        assert str(root) in uninstall_log and 'Uninstallation process succeeded.' in uninstall_log
+        assert 'Log closed.' in uninstall_log
     if native:
         import winreg
+        from wartnode import desktop_preferences
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER,desktop_preferences.RUN_KEY) as key:
+                winreg.QueryValueEx(key,desktop_preferences.RUN_NAME)
+        except FileNotFoundError:pass
+        else:raise RuntimeError('An existing desktop startup registration is present. Qualification will not replace it.')
         registry=r'Software\Microsoft\Windows\CurrentVersion\Uninstall\{AD317E15-0C4D-4586-BD4C-84C6551A2B8E}_is1'
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER,registry):pass
         except FileNotFoundError:pass
         else:raise RuntimeError('An existing WartNode installation is registered. The qualification will not change it.')
         setup(base_installer,'install-base');scenario('actual_per_user_install_in_space_and_unicode_path')
+        desktop_preferences.set_startup(True,root,profile)
+        assert desktop_preferences.startup_enabled(root,profile)
+        desktop_preferences.set_startup(False,root,profile)
+        assert not desktop_preferences.startup_enabled(root,profile)
+        desktop_preferences.set_startup(True,root,profile)
+        scenario('actual_per_user_startup_enable_disable_without_node_or_miner_autostart')
     else:
         setup(target_installer,'unsupported-server',refuse=True)
         assert not root.exists();scenario('hosted_server_refused_before_installation')
@@ -123,7 +161,8 @@ def main():
     try:
         client=Client(root/'versions'/base_version,profile)
         try:
-            client.call('import',kind='private',secret='00'*31+'01',password=password)
+            client.call('setup',password=password)
+            client.call('import',kind='private',secret='00'*31+'01',label='Main')
             reviewed=client.call('review',recipient=OTHER,amount='1.25000000')
             result=client.call('send',token=reviewed['token'],password=password)
             assert result['status']=='uncertain';tx_hash=result['tx_hash']
@@ -155,7 +194,7 @@ def main():
         archive=ROOT/f'dist/Wartnode-Desktop-{__version__}-windows-x64.zip'
         now=int(time.time())
         payload={'schema':1,'application':'wartnode','channel':'development','platform':'windows-x64',
-                 'version':__version__,'data_schema':updates.DATA_SCHEMA,'rollback_schema':updates.DATA_SCHEMA,'minimum_windows_build':26100,
+                 'version':__version__,'data_schema':updates.DATA_SCHEMA,'rollback_schema':updates.DATA_SCHEMA,'minimum_windows_build':MINIMUM_WINDOWS_BUILD,
                  'issued':now-10,'expires':now+86400,'files':files,
                  'asset':{'url':'https://publisher.example/update.zip','size':archive.stat().st_size,'sha256':updates.sha(archive)}}
         raw=json.dumps(payload,separators=(',',':')).encode()
@@ -195,6 +234,8 @@ def main():
             assert updates.active(root)['version']==base_version
             wallet_check();scenario('actual_launcher_interruption_recovers_previous_version_and_reservations')
             uninstall('uninstall-after-interruption')
+            assert not desktop_preferences.startup_enabled(root,profile)
+            scenario('actual_uninstall_removes_its_startup_registration')
             setup(base_installer,'reinstall-base')
             shutil.copy2(test_launcher,root/'WartNode.exe')
         else:

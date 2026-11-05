@@ -78,6 +78,21 @@ class ReleaseTests(unittest.TestCase):
             with self.subTest(field=field),self.assertRaises(ValueError):release.verify(self.envelope(dict(payload,**{field:value})),self.trust)
         with self.assertRaises(ValueError):release.verify(envelope,self.trust,highest='9.0.0')
 
+    def test_signed_release_and_update_share_the_windows11_family_floor(self):
+        envelope=self.signed()
+        update=updates.read_json(self.out/'update-envelope.json')
+        for build in (22000,22621,22631,26100,26200,26300,28000):
+            with self.subTest(build=build):
+                self.assertEqual(release.verify(envelope,self.trust,build=build)['minimum_windows_build'],22000)
+                self.assertEqual(updates.verify_envelope(update,self.update_trust,'0.0.0',build=build)['minimum_windows_build'],22000)
+        with self.assertRaises(ValueError):release.verify(envelope,self.trust,build=21999)
+        payload=release.verify(envelope,self.trust)
+        newer=self.envelope(dict(payload,minimum_windows_build=26100))
+        with patch('wartnode.release.current_windows_build',return_value=22000):
+            with self.assertRaises(ValueError):release.verify(newer,self.trust)
+        with patch('wartnode.release.current_windows_build',return_value=26100):
+            self.assertEqual(release.verify(newer,self.trust)['minimum_windows_build'],26100)
+
     def test_file_tamper_and_changed_ci_request_are_never_signed_or_trusted(self):
         request=updates.read_json(self.out/'release-request.json');request['ci']['run_id']=456
         atomic_json(self.out/'release-request.json',request)

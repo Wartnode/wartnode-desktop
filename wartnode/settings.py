@@ -11,11 +11,15 @@ from .paths import atomic_json
 LOCK = threading.RLock()
 NODE_FILES = {'chain.db3', 'chain.db3-wal', 'chain.db3-shm', 'peers.db3',
               'peers.db3-wal', 'peers.db3-shm', 'config.toml'}
-DEFAULTS = {'schema': 1, 'setup_complete': False, 'chain_directory': None,
+PAGES = ('Overview', 'Node', 'Wallet', 'Mine', 'Explorer', 'Settings')
+DEFAULTS = {'schema': 2, 'setup_complete': False, 'chain_directory': None,
             'connection_mode': 'local', 'connection_revision': 0,
-            'mining_mode': 'normal', 'cpu_limit': 50, 'gpu_limit': 50,
+            'mining_mode': 'balanced', 'cpu_limit': 60, 'gpu_limit': 60,
             'cpu_threads': max(1, (os.cpu_count() or 2)//2), 'gpu_device': 0,
-            'payout_address': '', 'contacts': []}
+            'payout_address': '', 'contacts': [], 'launch_at_startup': False,
+            'close_to_tray': True, 'start_page': 'Overview', 'appearance': 'dark',
+            'auto_lock_minutes': 15, 'hide_balances': False, 'automatic_updates': False,
+            'update_channel': 'beta'}
 
 
 class SettingsError(ValueError):
@@ -27,7 +31,21 @@ def read_settings(path):
         raw=stream.read(1024*1024+1)
     if len(raw)>1024*1024:raise ValueError('Settings exceed the size limit')
     value=json.loads(raw)
-    if (not isinstance(value,dict) or value.get('schema')!=1
+    if not isinstance(value,dict) or type(value.get('schema')) is not int or value['schema'] not in (1,2):
+        raise ValueError('Invalid settings format')
+    if value['schema']==1:
+        from .mining import LEGACY_PRESETS, validate
+        cpu,gpu,mode=value.get('cpu_limit',50),value.get('gpu_limit',50),value.get('mining_mode','normal')
+        validate(cpu,gpu)
+        if mode not in (*LEGACY_PRESETS,'custom') or (mode in LEGACY_PRESETS and (cpu!=LEGACY_PRESETS[mode] or gpu!=LEGACY_PRESETS[mode])):
+            raise ValueError('The saved mining preset does not match its limits')
+        value={**value,'schema':2,'mining_mode':'custom','cpu_limit':cpu,'gpu_limit':gpu,
+               'auto_lock_minutes':value.get('auto_lock_minutes',5)}
+    return validate_settings(value)
+
+
+def validate_settings(value):
+    if (not isinstance(value,dict) or value.get('schema')!=2
             or value.get('connection_mode','local') not in ('local','lite')
             or type(value.get('connection_revision',0)) is not int or value.get('connection_revision',0)<0
             or type(value.get('setup_complete',False)) is not bool
@@ -42,8 +60,20 @@ def read_settings(path):
     for contact in value.get('contacts',[]):
         if not isinstance(contact,dict) or not all(isinstance(contact.get(k),str) for k in ('name','address')):
             raise ValueError('Invalid contact list')
+    for key in ('launch_at_startup','close_to_tray','hide_balances','automatic_updates'):
+        if type(value.get(key,DEFAULTS[key])) is not bool:
+            raise ValueError('Invalid preference: '+key)
+    if value.get('start_page',DEFAULTS['start_page']) not in PAGES:
+        raise ValueError('Invalid start page')
+    if value.get('appearance',DEFAULTS['appearance']) not in ('dark','system'):
+        raise ValueError('Invalid appearance')
+    if (type(value.get('auto_lock_minutes',15)) is not int
+            or value.get('auto_lock_minutes',15) not in (0,5,15,60)):
+        raise ValueError('Invalid automatic lock interval')
+    if value.get('update_channel',DEFAULTS['update_channel']) not in ('beta','stable'):
+        raise ValueError('Invalid update channel')
     from .mining import validate
-    validate(value.get('cpu_limit',50),value.get('gpu_limit',50),value.get('mining_mode','normal'))
+    validate(value.get('cpu_limit',60),value.get('gpu_limit',60),value.get('mining_mode','balanced'))
     return {**DEFAULTS,**value}
 
 
@@ -62,16 +92,11 @@ def save(directory, **changes):
         value = load(directory)
         if set(changes)-set(DEFAULTS):
             raise ValueError('Unknown setting')
+        updated=validate_settings({**value,**changes})
         if (Path(directory)/'settings.json').exists():
             atomic_json(Path(directory)/'settings.previous.json',value)
-        value.update(changes)
-        from .mining import validate
-        validate(value['cpu_limit'],value['gpu_limit'],value['mining_mode'])
-        if (value['connection_mode'] not in ('local','lite')
-                or type(value['connection_revision']) is not int or value['connection_revision']<0):
-            raise ValueError('Invalid connection setting')
-        atomic_json(Path(directory)/'settings.json', value)
-        return value
+        atomic_json(Path(directory)/'settings.json', updated)
+        return updated
 
 
 def recover_settings(directory,use_previous):

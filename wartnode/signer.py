@@ -4,15 +4,19 @@ from pathlib import Path
 import sys
 import time
 from mnemonic import Mnemonic
-from .compat import WalletDB, wallet_utils as crypto, wallet_backup
+from .compat import wallet_utils as crypto
+from .profile import ProfileStore
+from . import profile_backup, settings
 from .rpc import NodeRPC, BroadcastUncertain, NodeError
 from . import settlement
+from .fees import transaction_fee
 
 
 class Signer:
     def __init__(self, directory, rpc=None):
         self.directory = Path(directory)
-        self.store = WalletDB(Path(directory) / "wallet.db")
+        self.store = ProfileStore(Path(directory) / "wallet.db")
+        self.profile_key = None
         self.override_rpc = rpc  # Internal fixture injection; no IPC operation can change this.
         self.binding = self.connection_context()
         self.rpc = self.binding[0]
@@ -31,6 +35,7 @@ class Signer:
             raise ValueError('The connection changed. Unlock the wallet and review the payment again.')
 
     def lock(self):
+        self.profile_key = None
         self.address = None
         self.review = None
         return {"locked": True}
@@ -39,16 +44,69 @@ class Signer:
         binding=self.connection_context()
         if binding!=self.binding:
             self.lock();self.binding=binding;self.rpc=binding[0]
-        if time.monotonic() - self.last_active > 300:
+        lock_minutes = settings.load(self.directory).get('auto_lock_minutes', 5)
+        if lock_minutes and time.monotonic() - self.last_active > lock_minutes*60:
             self.lock()
-        if action not in ("list", "balance", "history", "reconcile"):
+        if action not in ("list", "balance", "profile_balances", "history", "reconcile"):
             self.last_active = time.monotonic()
         if action == "list":
-            return {"wallets": self.store.public_wallets(), "address": self.address}
+            return {"wallets": self.store.public_wallets(), "address": self.address,
+                    "profile_ready": self.store.configured, "locked": self.profile_key is None,
+                    "name": self.store.name, "contacts": self.store.contacts()}
         if action == "lock":
             return self.lock()
+        if action == 'cancel_review':
+            self.review=None
+            return {'cancelled':True}
+        if action == 'setup':
+            self.profile_key = self.store.setup(args['password'], args.get('name', 'Personal'))
+            self.address = None
+            self.review = None
+            return {'profile_ready': True, 'locked': False, 'name': self.store.name}
+        if action == 'unlock':
+            self.lock()
+            key = self.store.unlock(args['password'])
+            wallets = self.store.public_wallets()
+            address = args.get('address') or (wallets[0]['address'] if wallets else None)
+            if address is not None:
+                address = crypto.validate_address(address)
+                if not any(row['address'] == address for row in wallets):
+                    raise ValueError('This address is not in the profile')
+            self.profile_key, self.address = key, address
+            return {'address': address, 'locked': False}
+        if action == 'restore':
+            snapshot = profile_backup.load(args['path'], args['password'])
+            self.lock()
+            count = self.store.restore_profile(snapshot, args['password'])
+            return {'added': count, 'locked': True}
+        if action == 'profile_balances':
+            return self.profile_balances(args, binding)
+        if action in ('select', 'touch', 'edit_address', 'save_contact', 'delete_contact',
+                      'change_password', 'create', 'import', 'backup') and self.profile_key is None:
+            raise ValueError('Unlock your profile first')
+        if action == 'select':
+            address = crypto.validate_address(args['address'])
+            if not self.store.get_wallet_by_address(address):
+                raise ValueError('This address is not in the profile')
+            self.address, self.review = address, None
+            return {'address': address}
+        if action == 'touch':
+            return {'locked': False}
+        if action == 'edit_address':
+            self.store.edit_address(args['address'], args.get('label'), bool(args.get('default', False)))
+            return {'saved': True}
+        if action == 'save_contact':
+            self.store.save_contact(args['name'], args['address'], args.get('previous'))
+            return {'saved': True}
+        if action == 'delete_contact':
+            self.store.delete_contact(args['address'])
+            return {'saved': True}
+        if action == 'change_password':
+            key = self.store.change_password(args['old_password'], args['new_password'])
+            self.lock()
+            del key
+            return {'saved': True, 'locked': True}
         if action in ("create", "import"):
-            crypto.validate_password(args["password"])
             phrase = None
             if action == "create":
                 phrase = Mnemonic("english").generate(strength=256)
@@ -62,36 +120,32 @@ class Signer:
                 address, key = crypto.wallet_from_seed(Mnemonic.to_seed(phrase_input, passphrase=""))
             else:
                 address, key = crypto.wallet_from_pkhex(args["secret"].strip())
-            encrypted, salt = crypto.encrypt_pk(key.to_string().hex(), args["password"])
-            self.store.insert_wallet(address, encrypted, salt)
+            self.store.add_address(self.profile_key, key.to_string().hex(), args.get('label', 'Address'))
             del key
             self.address = address
             self.review = None
             return {"address": address, "phrase": phrase}
-        if action == "unlock":
-            address, key = crypto.unlock_wallet_records(self.store.get_wallet_records_by_address(args["address"]), args["password"])
-            del key
-            self.address = address
-            self.review = None
-            return {"address": address}
         if action == "backup":
-            wallet_backup.save_backup(self.store.snapshot(), args["password"], args["path"])
+            key = self.store.unlock(args['password'])
+            if key != self.profile_key:
+                self.lock()
+                raise ValueError('The profile changed. Unlock it again')
+            path = Path(args['path'])
+            if path.suffix.lower() != '.wartprofile':
+                raise ValueError('Save the backup with the .wartprofile extension')
+            profile_backup.save(self.store.snapshot(), args["password"], path)
+            del key
             return {"saved": True}
-        if action == "restore":
-            self.lock()
-            count = self.store.restore_snapshot(wallet_backup.load_backup(args["path"], args["password"]))
-            return {"added": count}
-        if action == "import_database":
-            self.lock()
-            path = Path(args["path"])
-            if path.stat().st_size > wallet_backup.MAX_BACKUP_BYTES:
-                raise ValueError("Wallet database exceeds import limit")
-            return {"added": self.store.restore_snapshot(path.read_bytes())}
         if action == "history":
-            return {"rows": self.store.history(args["address"])}
+            address = crypto.validate_address(args['address'])
+            if not self.store.get_wallet_by_address(address):
+                raise ValueError('This address is not in the profile')
+            return {"rows": self.store.history(address)}
         if action == "reconcile":
             from .node_history import NodeHistory,matches_payment,verify_anchor
             owner = crypto.validate_address(args["address"])
+            if not self.store.get_wallet_by_address(owner):
+                raise ValueError('This address is not in the profile')
             client = NodeRPC(self.rpc, deadline=time.monotonic()+20)
             head = client.head(require_synced=True)
             client.require_network()
@@ -130,8 +184,8 @@ class Signer:
                     if not page['next_before']:break
                     before,anchor=page['next_before'],page['anchor']
             return {'rows':self.store.history(owner)}
-        if not self.address:
-            raise ValueError("Unlock a wallet first")
+        if not self.address or self.profile_key is None:
+            raise ValueError("Unlock your profile first")
         if action in ("balance", "review", "send"):
             client = NodeRPC(self.rpc)
             head = client.head(require_synced=True)
@@ -144,7 +198,11 @@ class Signer:
                 self.require_context(binding)
                 self.store.update_balance(self.address, crypto.format_e8(balance))
                 return {"address": self.address, "balance": balance, "reserved": reserved, "available": max(0, balance-reserved)}
-            fee = client.minimum_fee()
+            try:
+                fee = transaction_fee(client.minimum_fee())
+            except ValueError:
+                self.review = None
+                raise
             settlement.require_head(client,expected)
             if action == "review":
                 amount = max(0, balance-reserved-fee) if args.get("max") else crypto.parse_e8(args["amount"])
@@ -165,7 +223,7 @@ class Signer:
                     or time.monotonic()-reviewed["created"] > 90 or fee != reviewed["fee"]
                     or head.get("pinHash") != reviewed["pinHash"] or head.get("pinHeight") != reviewed["pinHeight"]):
                 raise ValueError("Payment details changed or the review expired. Review the payment again.")
-            owner, key = crypto.unlock_wallet_records(self.store.get_wallet_records_by_address(self.address), args["password"])
+            owner, key = self.store.private_key(self.profile_key, self.address)
             intent = crypto.TransferIntent(reviewed["recipient"], reviewed["amount"], reviewed["fee"])
             prepared = crypto.prepare_tx(intent.recipient, intent.amount, intent.fee, key, self.rpc)
             del key
@@ -193,6 +251,38 @@ class Signer:
             self.store.set_tx_status(owner, tx_hash, "pending")
             return {"tx_hash": tx_hash, "status": "pending"}
         raise ValueError("Unknown signer operation")
+
+    def profile_balances(self, args, binding):
+        """Public reads stay bounded and never decrypt a private key."""
+        offset, limit = args.get('offset', 0), args.get('limit', 20)
+        if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 25:
+            raise ValueError('Invalid balance page')
+        wallets = self.store.public_wallets()
+        selected = wallets[offset:offset+limit]
+        if not selected:
+            return {'rows': [], 'total': len(wallets), 'next_offset': None, 'source': self.rpc}
+        client = NodeRPC(self.rpc, deadline=time.monotonic()+20)
+        client.require_network()
+        head = client.head(require_synced=True)
+        rows = []
+        for record in selected:
+            owner = record['address']
+            try:
+                expected = settlement.refresh(self.store, client, owner, head,
+                                              lambda: self.require_context(binding))
+                balance = crypto.parse_e8(client.balance(owner), allow_zero=True)
+                settlement.require_head(client, expected)
+                self.require_context(binding)
+                reserved = self.store.reserved_amount(owner)
+                self.store.update_balance(owner, crypto.format_e8(balance))
+                rows.append(dict(address=owner, balance=balance, reserved=reserved,
+                                 available=max(0, balance-reserved)))
+            except ValueError:
+                self.require_context(binding)
+                rows.append(dict(address=owner, error='Balance unavailable'))
+        self.require_context(binding)
+        return {'rows': rows, 'total': len(wallets), 'source': self.rpc,
+                'next_offset': offset+limit if offset+limit < len(wallets) else None}
 
 
 def serve(directory):

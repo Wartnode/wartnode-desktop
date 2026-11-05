@@ -7,7 +7,7 @@ package=root/'dist/WartNode'
 files=list(package.rglob('*'))
 for file in files:
     name=file.name.lower()
-    if file.is_file() and (name.endswith(('.db','.db3','.wartbackup','.log')) or name=='icuuc.dll' or name.startswith('icudt') or any(part in name for part in ('nvrtc','cudart','bzminer'))):
+    if file.is_file() and (name.endswith(('.db','.db3','.wartbackup','.wartprofile','.log')) or name=='icuuc.dll' or name.startswith('icudt') or any(part in name for part in ('nvrtc','cudart','bzminer'))):
         raise SystemExit(f'Unexpected runtime or user data in package: {file.relative_to(package)}')
 for required in ('WartNode.exe','WartNodeHelper.exe','_internal/components/manifest.json','_internal/assets/fonts/montserrat-variable.ttf'):
     if not (package/required).is_file():raise SystemExit('Missing package file: '+required)

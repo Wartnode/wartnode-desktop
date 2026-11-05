@@ -122,6 +122,7 @@ class NativeUITests(unittest.TestCase):
 
     def test_signer_transport_and_receive_qr_with_synthetic_wallet(self):
         secret='00'*31+'04'
+        self.window.signer.call('setup',password='synthetic-password')
         result=self.window.signer.call('import',kind='private',secret=secret,password='synthetic-password')
         self.window.select_unlocked(result['address'])
         until(lambda:not self.window.tasks)
@@ -130,7 +131,7 @@ class NativeUITests(unittest.TestCase):
         self.assertNotIn('secret',self.window.signer.call('list'))
         self.window.lock_wallet()
         until(lambda:not self.window.tasks)
-        self.assertEqual(self.window.receive_address.text(),'')
+        self.assertEqual(self.window.receive_address.text(),result['address'])
         self.assertIsNone(self.window.signer.call('list')['address'])
 
     def test_palette_screens_render_without_clipped_minimum_layout(self):
@@ -148,6 +149,7 @@ class NativeUITests(unittest.TestCase):
         if os.name != 'nt':self.skipTest('Windows native message')
         import ctypes
         from ctypes import wintypes
+        self.window.signer.call('setup',password='synthetic-password')
         result=self.window.signer.call('import',kind='private',secret='00'*31+'04',password='synthetic-password')
         self.window.select_unlocked(result['address'])
         until(lambda:not self.window.tasks)
@@ -160,10 +162,12 @@ class NativeUITests(unittest.TestCase):
 
     def test_signer_autolock_and_offline_balance_are_reflected_in_ui(self):
         self.window.address='synthetic-address'
-        self.window.balance_loaded(None,'Unlock a wallet first')
+        self.window.balance_loaded(None,'Unlock your profile first')
         until(lambda:not self.window.tasks)
         self.assertIsNone(self.window.address)
         self.window.address='synthetic-address'
+        self.window.wallets=[{'address':'synthetic-address'}]
+        self.window.profile_balance=None
         self.window.update_state({'state':'Stopped'})
         self.assertEqual(self.window.summaries['Available WART'].text(),'Unavailable')
 

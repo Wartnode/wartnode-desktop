@@ -11,6 +11,7 @@ import runpy
 root=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(root))
 from wartnode import __version__
+from wartnode.preflight import MINIMUM_WINDOWS_BUILD
 from wartnode.installed import inventory,verify_bundle
 from wartnode import updates
 from wartnode.paths import atomic_json
@@ -26,7 +27,7 @@ assert manifest['application']==__version__
 (package/'provenance/build.json').unlink(missing_ok=True)
 context={'schema':1,'application':__version__,'source_commit':source_commit,
     'native_runtime':runpy.run_path(str(root/'scripts/audit-runtime.py'))['audit']()['observed'],
-    'created_utc':datetime.now(timezone.utc).isoformat(),'release_target':'Windows 11 x64','minimum_windows_build':26100,
+    'created_utc':datetime.now(timezone.utc).isoformat(),'release_target':'Windows 11 x64','minimum_windows_build':MINIMUM_WINDOWS_BUILD,
     'data_schema':updates.DATA_SCHEMA,'github_run_id':os.environ.get('GITHUB_RUN_ID'),
     'source_lock_sha256':updates.sha(root/'scripts/ci/sources.lock.json'),
     'toolchains_lock_sha256':updates.sha(root/'scripts/ci/toolchains.lock.json'),

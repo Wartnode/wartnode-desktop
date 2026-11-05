@@ -53,6 +53,7 @@ class LitePaymentTests(unittest.TestCase):
         self.dns.start();self.transport.start()
         self.profile=self.base/'wallet';self.profile.mkdir();settings.save(self.profile,connection_mode='lite')
         self.signer=Signer(self.profile)
+        self.signer.call('setup',{'password':'synthetic-password'})
         self.signer.call('import',{'kind':'private','secret':'00'*31+'01','password':'synthetic-password'})
     def tearDown(self):
         self.signer.store.con.close();self.transport.stop();self.dns.stop()
