@@ -15,6 +15,7 @@ import uuid
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from wartnode.processes import hidden_options
+from wartnode.preflight import windows_compatibility
 from wartnode.vanity_protocol import ProtocolState
 from wartnode.vanity_rates import Samples, PUBLIC_POINT
 
@@ -233,16 +234,20 @@ def main():
             signer.close()
         if options.legacy_package_dir:
             legacy_round_trip(package, options.legacy_package_dir.resolve(), directory, environment)
-        gui = subprocess.run([str(package/'WartNode.exe'), '--data-dir', str(directory),
-                              '--no-node', '--smoke-seconds', '2'], env=environment,
-                             capture_output=True, timeout=40, **hidden_options())
-        if gui.returncode:
-            raise ValueError('Packaged GUI smoke test failed: '+gui.stderr.decode('utf-8', errors='replace')[:2000])
+        gui_checked = windows_compatibility()['supported']
+        if gui_checked:
+            gui = subprocess.run([str(package/'WartNode.exe'), '--data-dir', str(directory),
+                                  '--no-node', '--smoke-seconds', '2'], env=environment,
+                                 capture_output=True, timeout=40, **hidden_options())
+            if gui.returncode:
+                raise ValueError('Packaged GUI smoke test failed: '+gui.stderr.decode('utf-8', errors='replace')[:2000])
     print(json.dumps(dict(all_passed=True, cpu_search_modes=3, encrypted_backup_restore=True,
                           manual_resume_after_restart=True, pending_search_backup_restore=True,
                           public_calibration=True,
                           legacy_upgrade_and_downgrade_refusal=bool(options.legacy_package_dir),
-                          packaged_gui_startup_shutdown=True, transactions_broadcast=0)))
+                          packaged_gui_startup_shutdown=gui_checked,
+                          packaged_gui_status='passed' if gui_checked else 'not_run_unsupported_build_host',
+                          transactions_broadcast=0)))
 
 
 if __name__ == '__main__':
