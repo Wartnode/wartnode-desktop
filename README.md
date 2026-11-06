@@ -100,6 +100,7 @@ Node provides Full/Lite selection, chain/resource statistics and a separate log 
 - **Sign / Verify:** prove address control with a message or file, then verify
   against an independently expected address. Works locally in Full node and Lite,
   including verification while locked. See the [format and guide](docs/SIGNED_PROOFS.md).
+  [View signing and verification screenshots](docs/SCREENSHOTS.md#sign-and-verify).
 - **Back up profile:** an encrypted .wartprofile backup covers every address,
   label, contact and durable payment record. Restore into an empty profile.
 

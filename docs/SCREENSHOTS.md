@@ -1,10 +1,12 @@
 # Wartnode-Desktop screenshots
 
-A tour of the six main pages, captured on November 5, 2026. The Mine screenshot
-shows **v0.5.0-beta.2**; the other screenshots show **v0.5.0-beta.1**. Balances,
-block heights, network statistics and mining readings reflect the capture sessions.
+A tour of the six main pages and the Sign / Verify workspace, captured on
+November 5, 2026. The signing screenshots show **v0.5.0-beta.3**, Mine shows
+**v0.5.0-beta.2**, and the remaining main-page screenshots show **v0.5.0-beta.1**.
+Balances, block heights, network statistics and mining readings reflect the
+capture sessions.
 
-[Overview](#overview) · [Node](#node) · [Wallet](#wallet) · [Mine](#mine) · [Explorer](#explorer) · [Settings](#settings)
+[Overview](#overview) · [Node](#node) · [Wallet](#wallet) · [Sign and Verify](#sign-and-verify) · [Mine](#mine) · [Explorer](#explorer) · [Settings](#settings)
 
 ## Overview
 
@@ -32,6 +34,30 @@ address, and access Send, Receive, encrypted profile backups, the address book
 and activity history.
 
 ![Wallet page showing the combined balance, labeled address list, address book and activity tabs, backup controls and address actions](screenshots/wallet.png)
+
+## Sign and Verify
+
+Open **Wallet → My addresses → Sign / Verify** to sign a message or file locally,
+or verify a proof against an independently obtained expected address. This works
+in Full node and Lite modes; public verification needs no wallet unlock.
+
+### Sign a message
+
+Choose an owned address, enter the message, then review and approve it. Copy the
+resulting public signature document or save it as a `.wartproof` file. This
+capture shows a signed message with its proof copied for sharing.
+
+![Sign tab showing a message, the signing address, a copied public signature document, and save and verification controls](screenshots/sign-message.png)
+
+### Verify a message
+
+Enter the address you expect and paste or open the signature document. A
+successful check displays **Verified for this address** and the signed content.
+
+![Verify tab showing the independently expected address, signature document, successful verification and the signed beta.3 message](screenshots/verify-message.png)
+
+See the [format and usage guide](SIGNED_PROOFS.md) for file proofs, compatibility
+and wallet-claim challenges.
 
 ## Mine
 
