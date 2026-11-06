@@ -24,7 +24,7 @@ from .preflight import MINIMUM_WINDOWS_BUILD, current_windows_build
 MAX_ENVELOPE = 1024*1024
 MAX_ARCHIVE = 256*1024*1024
 MAX_EXPANDED = 512*1024*1024
-DATA_SCHEMA = 4  # Fresh shared-password profiles; no legacy wallet conversion.
+DATA_SCHEMA = 5  # Format-2 profiles with durable vanity jobs; format 1 migrates in place.
 HEX = re.compile(r'[0-9a-f]{64}\Z')
 VERSION = re.compile(r'(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(dev|beta|rc)\.([1-9]\d*))?\Z')
 
@@ -318,7 +318,7 @@ def install_lock(root):
 def active(root,allow_legacy=False):
     value=read_json(Path(root)/'active.json')
     version_key(value['version'])
-    if value.get('data_schema')!=DATA_SCHEMA and not (allow_legacy and value.get('data_schema') in (1,2,3)):
+    if value.get('data_schema')!=DATA_SCHEMA and not (allow_legacy and value.get('data_schema') in (1,2,3,4)):
         raise ValueError('The installed version uses an incompatible data format')
     return value
 

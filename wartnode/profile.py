@@ -13,8 +13,10 @@ from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from .compat import WalletDB, wallet_utils as crypto
+from . import vanity_jobs
 
-PROFILE_FORMAT = 1
+PROFILE_FORMAT = 2
+READABLE_PROFILE_FORMATS = (1, PROFILE_FORMAT)
 KEY_MARKER = 'wartnode-profile-v1'
 KDF_ITERATIONS = 480000
 MAX_LABEL = 80
@@ -63,11 +65,14 @@ def guard_profile(path):
             raise ValueError('Invalid profile metadata')
         if rows:
             ident, version, salt, token, name = rows[0]
-            if (ident != 1 or type(version) is not int or version != PROFILE_FORMAT
+            if (ident != 1 or type(version) is not int or version not in READABLE_PROFILE_FORMATS
                     or not isinstance(salt, bytes) or len(salt) != 16
                     or not isinstance(token, bytes) or not 80 <= len(token) <= 512):
                 raise ValueError('Unsupported or damaged profile format')
             label_text(name)
+            job_table = con.execute("SELECT sql FROM sqlite_master WHERE name='desktop_vanity_jobs'").fetchone()
+            if (version == 1 and job_table is not None) or (version == PROFILE_FORMAT and job_table != (vanity_jobs.TABLE_SQL,)):
+                raise ValueError('Unsupported or damaged vanity profile schema')
         elif kinds.get('wallets') == 'table' and con.execute('SELECT 1 FROM wallets LIMIT 1').fetchone():
             raise ValueError('Profile key metadata is missing. Keep the database and restore a profile backup.')
     except sqlite3.Error as exc:
@@ -82,6 +87,7 @@ class ProfileStore(WalletDB):
         guard_profile(path)
         super().__init__(path)
         with self.con:
+            self.con.execute('BEGIN IMMEDIATE')
             self.con.execute('CREATE TABLE IF NOT EXISTS desktop_profile('
                              'id INTEGER PRIMARY KEY CHECK(id=1),format INTEGER NOT NULL,'
                              'salt BLOB NOT NULL,wrapped_key BLOB NOT NULL,name TEXT NOT NULL)')
@@ -92,6 +98,9 @@ class ProfileStore(WalletDB):
                              'is_default INTEGER NOT NULL,created INTEGER NOT NULL)')
             self.con.execute('CREATE TABLE IF NOT EXISTS desktop_contacts('
                              'address TEXT PRIMARY KEY,label TEXT NOT NULL)')
+            if not self.con.execute("SELECT 1 FROM sqlite_master WHERE name='desktop_vanity_jobs'").fetchone():
+                self.con.execute(vanity_jobs.TABLE_SQL)
+            self.con.execute('UPDATE desktop_profile SET format=? WHERE format=1', (PROFILE_FORMAT,))
 
     @property
     def configured(self):
@@ -137,22 +146,33 @@ class ProfileStore(WalletDB):
         return key
 
     def add_address(self, profile_key, private_key, label):
+        with self.con:
+            self.con.execute('BEGIN IMMEDIATE')
+            return self._insert_address(profile_key, private_key, label)
+
+    def get_wallet_by_address(self, address):
+        # The inherited read helper commits its connection context. Reads here
+        # must preserve the caller's wallet + finalization transaction.
+        return self.con.execute('SELECT * FROM wallets WHERE address=? COLLATE NOCASE', (address,)).fetchone()
+
+    def _insert_address(self, profile_key, private_key, label):
+        """Caller owns the transaction, including any durable finalization record."""
+        if not self.con.in_transaction:
+            raise ValueError('Address insertion requires a profile transaction')
         label = label_text(label)
         address, key = crypto.wallet_from_pkhex(private_key)
         del key
         payload = json.dumps({'address': address, 'private_key': private_key}, separators=(',', ':')).encode()
         token = Fernet(profile_key).encrypt(payload).decode('ascii')
-        with self.con:
-            self.con.execute('BEGIN IMMEDIATE')
-            if not self.configured:
-                raise ValueError('Set up the profile password first')
-            if self.con.execute('SELECT 1 FROM wallets WHERE address=? COLLATE NOCASE', (address,)).fetchone():
-                raise ValueError('This address is already in the profile')
-            first = self.con.execute('SELECT 1 FROM wallets LIMIT 1').fetchone() is None
-            self.con.execute('INSERT INTO wallets(address,pk,salt) VALUES(?,?,?)',
-                             (address, token, KEY_MARKER))
-            self.con.execute('INSERT INTO desktop_address_meta VALUES(?,?,?,?)',
-                             (address, label, int(first), int(time.time())))
+        if not self.configured:
+            raise ValueError('Set up the profile password first')
+        if self.con.execute('SELECT 1 FROM wallets WHERE address=? COLLATE NOCASE', (address,)).fetchone():
+            raise ValueError('This address is already in the profile')
+        first = self.con.execute('SELECT 1 FROM wallets LIMIT 1').fetchone() is None
+        self.con.execute('INSERT INTO wallets(address,pk,salt) VALUES(?,?,?)',
+                         (address, token, KEY_MARKER))
+        self.con.execute('INSERT INTO desktop_address_meta VALUES(?,?,?,?)',
+                         (address, label, int(first), int(time.time())))
         return address
 
     def private_key(self, profile_key, address):
@@ -215,7 +235,8 @@ class ProfileStore(WalletDB):
         if (self.con.execute('SELECT 1 FROM wallets LIMIT 1').fetchone()
                 or self.con.execute('SELECT 1 FROM tx_history LIMIT 1').fetchone()
                 or self.con.execute('SELECT 1 FROM archived_tx_history LIMIT 1').fetchone()
-                or self.con.execute('SELECT 1 FROM desktop_contacts LIMIT 1').fetchone()):
+                or self.con.execute('SELECT 1 FROM desktop_contacts LIMIT 1').fetchone()
+                or self.con.execute('SELECT 1 FROM desktop_vanity_jobs LIMIT 1').fetchone()):
             raise ValueError('Restore into a fresh empty profile so existing addresses and payments are kept')
         if not isinstance(snapshot, bytes) or len(snapshot) > 32*1024*1024:
             raise ValueError('Profile backup exceeds the size limit')
@@ -225,7 +246,10 @@ class ProfileStore(WalletDB):
             source.execute('PRAGMA trusted_schema=OFF')
             source.execute('PRAGMA query_only=ON')
             schema = "SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name"
-            if source.execute(schema).fetchall() != self.con.execute(schema).fetchall():
+            expected = self.con.execute(schema).fetchall()
+            observed = source.execute(schema).fetchall()
+            legacy = [row for row in expected if row[1] != 'desktop_vanity_jobs']
+            if observed not in (expected, legacy):
                 raise ValueError('This is not a supported profile backup format')
             if source.execute('PRAGMA integrity_check').fetchone() != ('ok',):
                 raise ValueError('The profile backup is damaged')
@@ -233,7 +257,8 @@ class ProfileStore(WalletDB):
             if len(metadata) != 1:
                 raise ValueError('Invalid profile backup metadata')
             ident, version, salt, wrapped, name = metadata[0]
-            if ident != 1 or type(version) is not int or version != PROFILE_FORMAT:
+            if (ident != 1 or type(version) is not int or version not in READABLE_PROFILE_FORMATS
+                    or (version == 1) != (observed == legacy)):
                 raise ValueError('Unsupported profile backup format')
             label_text(name)
             if not isinstance(wrapped, bytes) or not 80 <= len(wrapped) <= 512:
@@ -280,8 +305,27 @@ class ProfileStore(WalletDB):
                     row = validate_saved_record(dict(zip(columns, record)))
                     if row['wallet_address'] not in owners or row['network'] != 'mainnet':
                         raise ValueError('Payment does not belong to this profile')
+            if version == PROFILE_FORMAT:
+                from .vanity_keys import VanityKeys
+                job_rows = source.execute('SELECT '+','.join(vanity_jobs.COLUMNS)+' FROM desktop_vanity_jobs LIMIT 10001').fetchall()
+                if len(job_rows) > vanity_jobs.MAX_JOBS:
+                    raise ValueError('Profile backup contains too many vanity jobs')
+                pending = 0
+                for row in job_rows:
+                    job = vanity_jobs.row_value(row)
+                    VanityKeys.validate_private(job, key)
+                    if job['state'] != 'saved':
+                        pending += 1
+                    elif job['address'] not in owners:
+                        raise ValueError('Saved vanity address is missing from this backup')
+                if pending > 1:
+                    raise ValueError('Profile backup contains multiple pending vanity jobs')
             # Imported confirmations must be revalidated against the active node.
             source.execute('PRAGMA query_only=OFF')
+            if version == 1:
+                source.execute(vanity_jobs.TABLE_SQL)
+                source.execute('UPDATE desktop_profile SET format=? WHERE id=1', (PROFILE_FORMAT,))
+            source.execute("UPDATE desktop_vanity_jobs SET state='paused',run_id=NULL,error='' WHERE state='running'")
             source.execute('DELETE FROM desktop_settlement_anchor')
             source.commit()
             source.backup(self.con)

@@ -97,6 +97,7 @@ def build_wallet(self):
     addresses=QWidget();body=QVBoxLayout(addresses)
     toolbar=QHBoxLayout()
     toolbar.addWidget(button('New address',self.create_wallet,True))
+    toolbar.addWidget(button('Vanity address',self.show_vanity))
     toolbar.addWidget(button('Import address',self.import_wallet))
     toolbar.addWidget(button('Sign / Verify',self.show_proofs));toolbar.addStretch()
     body.addLayout(toolbar)

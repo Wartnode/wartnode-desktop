@@ -174,7 +174,7 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(updates.active(self.root)['version'],'0.3.0-dev.2')
 
     def test_installer_migrates_legacy_contract_but_cannot_roll_back_to_it(self):
-        current=updates.read_json(self.root/'active.json');current['data_schema']=1
+        current=updates.read_json(self.root/'active.json');current['data_schema']=4
         atomic_json(self.root/'active.json',current)
         installed.check_target(self.root,'0.3.0-dev.2')
         new=self.root/'versions/0.3.0-dev.2'

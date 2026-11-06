@@ -5,7 +5,8 @@ import tempfile
 from cryptography.fernet import InvalidToken
 from .profile import wrapping_cipher
 
-MAGIC = b'WARTNODE-PROFILE\x01'
+MAGIC = b'WARTNODE-PROFILE\x02'
+LEGACY_MAGIC = b'WARTNODE-PROFILE\x01'
 MAX_SNAPSHOT = 32*1024*1024
 MAX_BACKUP = 48*1024*1024
 
@@ -19,7 +20,7 @@ def encode(snapshot, password):
 
 def decode(content, password):
     if (not isinstance(content, bytes) or len(content) > MAX_BACKUP
-            or not content.startswith(MAGIC) or len(content) < len(MAGIC)+16+80):
+            or not content.startswith((MAGIC, LEGACY_MAGIC)) or len(content) < len(MAGIC)+16+80):
         raise ValueError('Choose a supported Wartnode profile backup')
     offset = len(MAGIC)
     try:

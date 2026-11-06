@@ -28,3 +28,6 @@ vendor/wart_dapp/
 vendor/connectcoin/
 vendor/janusminer/
 *.wartprofile
+vendor/vanity-pro/
+native/vanity-worker/target/
+notices/vanity-worker-dependencies/

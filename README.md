@@ -1,5 +1,8 @@
 # Wartnode-Desktop
 
+The **0.6.0-beta.1 candidate** adds vanity addresses in Wallet. See the
+[feature, upgrade and downgrade notes](docs/RELEASE_0_6_0_BETA_1.md).
+
 A Warthog wallet, explorer, full node and solo miner for Windows 11.
 
 [Download the beta](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.5.0-beta.3) · [Screenshots](docs/SCREENSHOTS.md) · [User guide](docs/MVP_GUIDE.md) · [Build from source](docs/BUILD.md) · [Report an issue](https://github.com/Wartnode/wartnode-desktop/issues/new/choose)

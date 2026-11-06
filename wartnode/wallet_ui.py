@@ -9,6 +9,14 @@ from . import settings
 
 
 class WalletActions:
+    def show_vanity(self):
+        if not hasattr(self, 'vanity_dialog'):
+            from .vanity_ui import VanityDialog
+            self.vanity_dialog = VanityDialog(self)
+        self.vanity_dialog.show()
+        self.vanity_dialog.raise_()
+        self.vanity_dialog.activateWindow()
+
     def close_send(self):
         self.payment_generation+=1
         self.recipient.clear();self.amount.clear()

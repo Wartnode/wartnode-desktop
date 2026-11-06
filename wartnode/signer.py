@@ -26,6 +26,8 @@ class Signer:
         self.last_active = time.monotonic()
         self.review = None
         self.proof_review = None
+        from .vanity_keys import VanityKeys
+        self.vanity = VanityKeys(self.store)
 
     def connection_context(self):
         if self.override_rpc is not None:return (self.override_rpc,0)
@@ -51,7 +53,8 @@ class Signer:
         lock_minutes = settings.load(self.directory).get('auto_lock_minutes', 5)
         if lock_minutes and time.monotonic() - self.last_active > lock_minutes*60:
             self.lock()
-        if action not in ("list", "balance", "profile_balances", "history", "reconcile"):
+        if action not in ("list", "balance", "profile_balances", "history", "reconcile",
+                          'vanity_status','vanity_checkpoint','vanity_found','vanity_pause','vanity_fail'):
             self.last_active = time.monotonic()
         if action == "list":
             return {"wallets": self.store.public_wallets(), "address": self.address,
@@ -90,6 +93,30 @@ class Signer:
             return {'added': count, 'locked': True}
         if action == 'profile_balances':
             return self.profile_balances(args, binding)
+        if action == 'vanity_status':
+            return {'record':self.vanity.info(args.get('job_id'))}
+        if action == 'vanity_checkpoint':
+            return self.vanity.checkpoint(args['job_id'], args['run_id'], args['checkpoint'])
+        if action == 'vanity_found':
+            return self.vanity.found(args['job_id'], args['run_id'], args['checkpoint'], args['candidate'])
+        if action in ('vanity_pause','vanity_fail'):
+            return self.vanity.pause(args['job_id'], args.get('run_id'), args.get('checkpoint'),
+                                     args.get('error') if action == 'vanity_fail' else None)
+        if action in ('vanity_prepare', 'vanity_resume', 'vanity_discard', 'vanity_finalize'):
+            if self.profile_key is None:
+                raise ValueError('Unlock your profile first')
+            if action == 'vanity_prepare':
+                return self.vanity.prepare(self.profile_key, args.get('prefix', ''), args.get('suffix', ''),
+                                          args.get('label','Vanity address'), args.get('backend','auto'))
+            if action == 'vanity_resume':
+                return self.vanity.resume(self.profile_key, args['job_id'], args.get('backend','auto'))
+            if action == 'vanity_discard':
+                return self.vanity.discard(self.profile_key, args['job_id'])
+            result = self.vanity.finalize(self.profile_key, self.store, args['job_id'],
+                                         args.get('candidate'), args.get('label', 'Vanity address'))
+            self.address = result['address']
+            self.review = self.proof_review = None
+            return result
         if action in ('select', 'touch', 'edit_address', 'save_contact', 'delete_contact',
                       'change_password', 'create', 'import', 'backup') and self.profile_key is None:
             raise ValueError('Unlock your profile first')

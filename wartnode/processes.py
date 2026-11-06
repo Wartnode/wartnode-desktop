@@ -160,6 +160,8 @@ class Runtime:
         self.directory = Path(directory)
         self.node = OwnedProcess("node", directory)
         self.miner = OwnedProcess("miner", directory)
+        from .vanity_worker import VanityWorker
+        self.vanity = VanityWorker(self.directory)
         self.ready = False
         self.checked = 0
         self.lite_connected_at = None
@@ -431,6 +433,8 @@ class Runtime:
     def start_miner(self, payout, threads, backend, device=0, *, cpu_limit=60, gpu_limit=60,generation=None,automatic=False):
         if self.closed:
             raise ValueError('Application is shutting down')
+        if self.vanity.running and self.vanity.exclusive:
+            raise ValueError('Stop the vanity search before starting mining; its combined pattern exceeds 8 characters')
         if generation is None:generation=self.mining_generation
         if generation!=self.mining_generation:raise ValueError('Mining start was cancelled')
         from . import settings
@@ -483,7 +487,34 @@ class Runtime:
     @serialized
     def shutdown(self):
         self.closed = True
+        self.vanity.close()
         return self.stop_node()
+
+    @serialized
+    def start_vanity(self, run, backend):
+        if self.closed:
+            raise ValueError('Application is shutting down')
+        from .vanity import pattern
+        job = run.get('job', run)
+        value = pattern(job['pattern']['prefix'], job['pattern']['suffix'])
+        if value.exclusive and (self.miner.running or self.mining_requested):
+            raise ValueError('Stop mining before searching for more than 8 combined prefix and suffix characters')
+        self.vanity.start(run, backend)
+        return {'started': True}
+
+    @serialized
+    def stop_vanity(self):
+        self.vanity.close()
+        return {'stopped': True}
+
+    @serialized
+    def calibrate_vanity(self, backend, match_mode):
+        if self.closed:
+            raise ValueError('Application is shutting down')
+        if self.miner.running or self.mining_requested:
+            raise ValueError('Stop mining before measuring search speed')
+        self.vanity.calibrate(backend, match_mode)
+        return {'started': True}
 
     @serialized
     def archive_chain(self):
@@ -578,11 +609,27 @@ class SignerClient:
             if _valid is not None and not _valid():
                 # Keep the transport lock until the helper has discarded the
                 # stale authorization. A later unlock cannot overtake this lock.
-                self._exchange('lock',{})
+                try:
+                    if action in ('vanity_prepare', 'vanity_resume') and result:
+                        self._exchange('vanity_pause', {'job_id':result['job_id'], 'run_id':result['run_id']})
+                finally:
+                    self._exchange('lock',{})
                 return None
             return result
 
-    def _exchange(self,action,args):
+    def vanity_call(self, action, **args):
+        """Bound public progress writes, including waiting for another operation."""
+        if action not in ('vanity_status','vanity_checkpoint','vanity_found','vanity_pause','vanity_fail'):
+            raise ValueError('Only public vanity persistence uses the short deadline')
+        deadline = time.monotonic()+5
+        if not self.lock.acquire(timeout=5):
+            raise ValueError('The signing helper is busy; the last vanity checkpoint is preserved')
+        try:
+            return self._exchange(action, args, timeout=max(.001, deadline-time.monotonic()))
+        finally:
+            self.lock.release()
+
+    def _exchange(self,action,args,timeout=40):
         """Caller holds self.lock across the complete request/response."""
         if self.process.poll() is not None:
             raise ValueError('The signing helper stopped. Restart Wartnode-Desktop; saved payments remain reserved.')
@@ -591,7 +638,7 @@ class SignerClient:
         self.process.stdin.write((json.dumps(request) + "\n").encode())
         self.process.stdin.flush()
         try:
-            response = self.responses.get(timeout=40)
+            response = self.responses.get(timeout=timeout)
         except queue.Empty as exc:
             self.process.kill()
             raise ValueError("Wallet operation timed out. Restart the application; any saved payment remains reserved.") from exc

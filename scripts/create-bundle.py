@@ -31,7 +31,7 @@ context={'schema':1,'application':__version__,'source_commit':source_commit,
     'data_schema':updates.DATA_SCHEMA,'github_run_id':os.environ.get('GITHUB_RUN_ID'),
     'source_lock_sha256':updates.sha(root/'scripts/ci/sources.lock.json'),
     'toolchains_lock_sha256':updates.sha(root/'scripts/ci/toolchains.lock.json'),
-    'components':{name:manifest['components'][name]['sha256'] for name in ('node','miner')},
+    'components':{name:entry['sha256'] for name,entry in manifest['components'].items() if 'file' in entry},
     'runtime_sources':{p.relative_to(root).as_posix():updates.sha(p) for p in sorted((root/'wartnode').glob('*.py'))},
     'production_release':False,'clean_windows11_certified':False,
     'verification_receipts':'Generated after packaging; included with source and delivery artifacts'}

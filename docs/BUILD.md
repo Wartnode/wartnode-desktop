@@ -85,3 +85,14 @@ CI inventories every runtime/build/release package and SDK repository advisory.
 These results require applicability review and do not certify the pinned source
 as vulnerability-free. Frozen helper checks cover message/file proofs, locked
 verification, single-use approvals, tampering and v1 compatibility.
+
+## Vanity native worker
+
+Install Rust 1.99.0 with rustfmt and Clippy. Before preparing components or
+packaging, run `python scripts/build-vanity.py --checks`. This verifies and
+materializes the retained pinned source, uses the committed Cargo lockfile,
+checks formatting/tests/Clippy, and generates dependency notices and the worker
+build receipt. The worker receives public search data; wallet custody remains
+in the private signer. CI also checks the final extracted vanity package and
+queries current advisories for Python and Rust locks. OpenCL hardware checks
+remain explicit qualification, separate from hosted CPU regressions.

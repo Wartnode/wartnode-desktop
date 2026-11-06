@@ -1,4 +1,4 @@
-"""Read current advisories for every hash-locked Python input, including source pins."""
+"""Read current advisories for locked Python inputs and the native vanity worker."""
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -103,7 +103,7 @@ def github_entries(endpoint, *parameters):
 
 def query(item):
     name, version = item['package'], item['version']
-    advisories = github_entries('/advisories', '-f', 'ecosystem=pip', '-f', 'type=reviewed',
+    advisories = github_entries('/advisories', '-f', 'ecosystem='+item.get('ecosystem', 'pip'), '-f', 'type=reviewed',
                                '-f', f'affects={name}@{version}')
     result = dict(item, advisories=advisories)
     if item['source']['type'] == 'source-archive':
@@ -115,17 +115,32 @@ def query(item):
     return result
 
 
+def cargo_inputs(root=ROOT):
+    path = root/'native/vanity-worker/Cargo.lock'
+    result = []
+    for package in tomllib.loads(path.read_text(encoding='utf-8'))['package']:
+        if 'source' not in package:
+            continue  # Local adapter and pinned upstream source are reviewed separately.
+        if (package['source'] != 'registry+https://github.com/rust-lang/crates.io-index'
+                or not re.fullmatch(HASH, package.get('checksum', ''))):
+            raise ValueError('Unreviewed Rust dependency source: '+package['name'])
+        result.append(dict(package=package['name'], version=package['version'], ecosystem='rust',
+            source=dict(type='cargo', sha256=package['checksum']),
+            locks=[path.relative_to(root).as_posix()]))
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, default=ROOT / 'work/step5/dependency-advisories.json')
     args = parser.parse_args()
-    inputs = locked_inputs()
+    inputs = locked_inputs()+cargo_inputs()
     with ThreadPoolExecutor(max_workers=5) as pool:
         results = list(pool.map(query, inputs))
     findings = [r for r in results if r['advisories'] or r.get('repository_advisories')]
     record = dict(checked_utc=datetime.now(timezone.utc).isoformat(),
                   provider='GitHub reviewed global and published repository advisory APIs',
-                  scope='Every Python runtime/build/release lock, including verified source pins; native and full source review remain separate.',
+                  scope='Python runtime/build/release locks and registry packages in the vanity Cargo.lock; pinned upstream and full source review remain separate.',
                   lookup_complete=True, findings_require_review=bool(findings), results=results)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(record, indent=2) + '\n', encoding='utf-8')

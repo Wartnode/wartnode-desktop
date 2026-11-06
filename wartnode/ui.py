@@ -132,6 +132,7 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
         self.update_checking=False
         self.last_update_check=0
         self.signer = SignerClient(directory)
+        self.runtime.vanity.persist = self.signer.vanity_call
         self.pool = QThreadPool(self)
         self.pool.setMaxThreadCount(4)
         self.lifecycle_pool=QThreadPool(self)
@@ -303,6 +304,12 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
             if msg.message == 0x02B1 and msg.wParam in (2, 6, 7):
                 # Remote disconnect, logoff and session lock invalidate signing context.
                 self.lock_wallet()
+            if msg.message == 0x0218 and msg.wParam == 4:
+                # Windows suspend preserves the checkpoint; waking never resumes hashing.
+                if hasattr(self, 'vanity_dialog'):
+                    self.vanity_dialog.pause_search()
+                else:
+                    self.submit(self.runtime.stop_vanity, quiet=True, lifecycle=True)
         return False, 0
 
     def submit(self, function, callback=None, quiet=False, during_shutdown=False,lifecycle=False):
@@ -596,7 +603,9 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
         self.overview_status.setText(f"Block height: {state.get('height',0):,}. " + ("Ready to send payments." if self.runtime.ready and not local else ("Ready to send payments and mine." if self.runtime.ready else "Connect to a ready node to send payments.")))
         self.review_button.setEnabled(self.runtime.ready and bool(self.address))
         self.max_button.setEnabled(self.runtime.ready and bool(self.address))
-        self.start_mining.setEnabled(local and self.runtime.ready and not self.runtime.miner.running and not self.runtime.mining_requested and not self.mining_busy and not self.editing_mining and self.has_mining_gpu())
+        vanity_exclusive = self.runtime.vanity.running and self.runtime.vanity.exclusive
+        self.start_mining.setEnabled(local and self.runtime.ready and not self.runtime.miner.running and not self.runtime.mining_requested and not self.mining_busy and not self.editing_mining and not vanity_exclusive and self.has_mining_gpu())
+        self.start_mining.setToolTip('Stop the vanity search before starting mining; the pattern exceeds 8 characters.' if vanity_exclusive else '')
         if self.address and not self.runtime.ready:
             self.wallet_status.setText('Wallet unlocked. Balance unavailable until the node is ready.')
         self.update_profile_balance_display()
@@ -1114,7 +1123,7 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
             self.device.addItem('No supported GPU found',0)
         elif self.preferences['gpu_device']<len(names):
             self.device.setCurrentIndex(self.preferences['gpu_device'])
-        self.start_mining.setEnabled(self.runtime.ready and not self.runtime.miner.running and not self.runtime.mining_requested and not self.mining_busy and not self.editing_mining and bool(names))
+        self.start_mining.setEnabled(self.runtime.ready and not self.runtime.miner.running and not self.runtime.mining_requested and not self.mining_busy and not self.editing_mining and not (self.runtime.vanity.running and self.runtime.vanity.exclusive) and bool(names))
 
     def has_mining_gpu(self):
         backend = self.backend.currentData()
@@ -1160,6 +1169,7 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
             event.ignore()
             self.lock_wallet()
             if self.preferences['close_to_tray'] and QSystemTrayIcon.isSystemTrayAvailable():
+                if hasattr(self, 'vanity_dialog') and self.vanity_dialog.isVisible():self.vanity_dialog.reject()
                 self.hide()
                 if self.mining_settings_dialog.isVisible():self.mining_settings_dialog.reject()
                 for dialog in (self.send_dialog,self.receive_dialog,self.node_log_dialog,self.mining_log_dialog,self.mining_settings_dialog):dialog.hide()
@@ -1175,6 +1185,9 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
         if self.exiting or self.closing:
             return
         self.closing = True
+        if hasattr(self, 'vanity_dialog'):
+            self.vanity_dialog.timer.stop()
+            self.vanity_dialog.hide()
         self.runtime.cancel_mining()
         self.timer.stop()
         self.lock_wallet()

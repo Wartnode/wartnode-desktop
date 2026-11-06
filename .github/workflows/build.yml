@@ -72,6 +72,13 @@ jobs:
         run: ./scripts/ci/install-llvm.ps1
       - name: Rebuild all miner libraries and run CPU proof regressions
         run: ./scripts/ci/enter-toolchain.ps1
+      - name: Build pinned public-only vanity worker
+        env:
+          RUSTUP_TOOLCHAIN: 1.99.0
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal --no-self-update
+          rustup component add rustfmt clippy --toolchain 1.99.0
+          python scripts/build-vanity.py --checks
       - name: Prepare source-built components
         run: python scripts/prepare-components.py
       - name: Verify official source and approved patch

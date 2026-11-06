@@ -15,7 +15,7 @@ manifest=json.loads((package/'_internal/components/manifest.json').read_text(enc
 context=json.loads((package/'provenance/build-context.json').read_text(encoding='utf-8'))
 if context['application']!=manifest['application'] or (package/'provenance/build.json').exists():
     raise SystemExit('Stale bundled build receipt')
-for component in ('node','miner'):
+for component in (name for name,entry in manifest['components'].items() if 'file' in entry):
     info=manifest['components'][component]
     data=(package/'_internal/components'/info['file']).read_bytes()
     if hashlib.sha256(data).hexdigest()!=info['sha256']:raise SystemExit('Component hash mismatch: '+component)

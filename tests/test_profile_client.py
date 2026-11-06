@@ -45,5 +45,23 @@ class ProfileClientTests(unittest.TestCase):
         self.client.call('unlock',password='synthetic-client-password')
         self.assertFalse(self.client.call('list')['locked'])
 
+    def test_lock_during_vanity_start_or_resume_leaves_job_paused(self):
+        self.client.call('unlock',password='synthetic-client-password')
+        for action in ('vanity_prepare','vanity_resume'):
+            with self.subTest(action=action):
+                valid=[True]
+                exchange=self.client._exchange
+                def invalidated(operation,args):
+                    result=exchange(operation,args)
+                    if operation==action:valid[0]=False
+                    return result
+                args={'prefix':'abcdef'} if action=='vanity_prepare' else {'job_id':row['job_id']}
+                with patch.object(self.client,'_exchange',side_effect=invalidated):
+                    self.assertIsNone(self.client.call(action,_valid=lambda:valid[0],**args))
+                self.assertTrue(self.client.call('list')['locked'])
+                row=self.client.call('vanity_status')['record']
+                self.assertEqual(row['state'],'paused')
+                self.client.call('unlock',password='synthetic-client-password')
+
 
 if __name__=='__main__':unittest.main()

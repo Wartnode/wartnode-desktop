@@ -66,6 +66,12 @@ manifest = {'schema':1,'network':'mainnet','application':__version__,'components
     'wallet':{'repository':'https://github.com/JohnnyB813/wart-dapp',
         'commit':'772f55d99d066988927d82cd787ab17be5e6c8c9', 'source_archive_sha256':digest(ROOT/'work/wallet-source.tar')}
 }}
+vanity_receipt = ROOT/'vendor/sources/vanity-build.json'
+if vanity_receipt.exists():
+    vanity = json.loads(vanity_receipt.read_text(encoding='utf-8'))
+    assert vanity['file']=='wartnode-vanity.exe' and digest(components/vanity['file'])==vanity['sha256'], 'Rebuild the vanity worker'
+    assert all(digest(ROOT/path)==value for path,value in vanity['adapter_sources'].items()), 'Rebuild the vanity worker after changing its source'
+    manifest['components']['vanity'] = vanity
 (components/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
 (ROOT/'provenance/components.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
 for name, source in [('Warthog-core-MIT.txt','vendor/upstream-core/LICENSE'),('BRminer-GPL3.txt','vendor/brminer/LICENSE'),('Warthog-wallet-MIT.txt','vendor/wart_dapp/LICENSE')]:

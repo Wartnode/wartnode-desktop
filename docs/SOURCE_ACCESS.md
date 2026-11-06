@@ -60,3 +60,16 @@ the affected release. The source inventory hashes identify the retained bytes.
 
 See [build instructions](BUILD.md), the [GPL](../LICENSE) and
 [Qt's open-source distribution guidance](https://www.qt.io/development/open-source-lgpl-obligations).
+
+## Vanity worker
+
+The matching source includes pinned MIT-licensed Vanity Pro source at
+`vendor/sources/vanity-pro.tar.gz`, the public pipe adapter and exact Cargo lock
+under `native/vanity-worker`, and `scripts/build-vanity.py`. The source identity
+and worker build receipt are retained in `vendor/sources/vanity-build.json`.
+Upstream notices are in `notices/Vanity-Pro-MIT.txt` and `notices/vanity-pro`.
+The build generates `notices/vanity-worker-dependencies/inventory.json` and
+retains upstream license/attribution files for the resolved Windows Cargo graph.
+It records versions, SPDX declarations, authors, repositories and notice hashes.
+The lockfile records exact registry source checksums. The source archive and
+Cargo package sources identified there provide the matching Rust build inputs.
