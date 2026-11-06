@@ -1,12 +1,13 @@
 # Wartnode-Desktop screenshots
 
-A tour of the six main pages and the Sign / Verify workspace, captured on
-November 5, 2026. The signing screenshots show **v0.5.0-beta.3**, Mine shows
-**v0.5.0-beta.2**, and the remaining main-page screenshots show **v0.5.0-beta.1**.
+A tour of the six main pages and Wallet dialogs. Wallet shows
+**v0.6.0-beta.2** and the vanity dialog shows **v0.6.0-beta.1**, captured on
+November 6, 2026. The November 5 captures show **v0.5.0-beta.3** for Sign / Verify,
+**v0.5.0-beta.2** for Mine, and **v0.5.0-beta.1** for the other main pages.
 Balances, block heights, network statistics and mining readings reflect the
 capture sessions.
 
-[Overview](#overview) · [Node](#node) · [Wallet](#wallet) · [Sign and Verify](#sign-and-verify) · [Mine](#mine) · [Explorer](#explorer) · [Settings](#settings)
+[Overview](#overview) · [Node](#node) · [Wallet](#wallet) · [Vanity addresses](#vanity-addresses) · [Sign and Verify](#sign-and-verify) · [Mine](#mine) · [Explorer](#explorer) · [Settings](#settings)
 
 ## Overview
 
@@ -29,11 +30,22 @@ node log available in a separate window.
 ## Wallet
 
 Manage labeled addresses under one profile password and view their combined
-available balance. Create or import addresses, select a default or mining payout
-address, and access Send, Receive, encrypted profile backups, the address book
-and activity history.
+available balance. Create normal or vanity addresses, import existing addresses,
+select a default or mining payout address, and access Send, Receive, encrypted
+profile backups, the address book and activity history. The selected address's
+**Private key…** action reveals or copies its key after password confirmation.
 
-![Wallet page showing the combined balance, labeled address list, address book and activity tabs, backup controls and address actions](screenshots/wallet.png)
+![Wallet in beta.2 showing the combined balance, labeled address list, backup controls, Vanity address button and Private key action](screenshots/wallet.png)
+
+## Vanity addresses
+
+Open **Wallet → My addresses → Vanity address** to search for a prefix, suffix
+or both. Preview the pattern, review its difficulty and estimate search time on
+your computer. Mining must stay stopped for searches over eight combined
+prefix/suffix characters. See the [vanity guide](MVP_GUIDE.md#vanity-addresses)
+for saved searches and recovery.
+
+![Vanity address dialog showing a ten-character prefix, address preview, demanding-pattern estimate, local timing control and mining-stop requirement](screenshots/vanity-address.png)
 
 ## Sign and Verify
 
