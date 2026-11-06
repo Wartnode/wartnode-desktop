@@ -9,7 +9,7 @@ Download the installer or portable ZIP, matching source ZIP, `SHA256SUMS`,
 PowerShell can show a file's SHA-256 value:
 
 ```powershell
-Get-FileHash .\Wartnode-Desktop-0.6.0-beta.1-windows-x64-setup.exe -Algorithm SHA256
+Get-FileHash .\Wartnode-Desktop-0.6.0-beta.2-windows-x64-setup.exe -Algorithm SHA256
 ```
 
 Compare it with `SHA256SUMS`. A matching checksum detects corruption; project
@@ -39,7 +39,7 @@ An already trusted installation with compatible release/data support can use:
 WartNodeHelper.exe --verify-release .\downloads\release-envelope.json --release-directory .\downloads
 ```
 
-**0.6.0-beta.1 uses data contract 5.** A 0.5.0 verifier may refuse that new
+**0.6.0-beta.2 uses data contract 5.** A 0.5.0 verifier may refuse that new
 contract. Use a trusted 0.6 source checkout with the locked dependencies, or a
 compatible already trusted verifier. The project key fingerprints above are
 unchanged. Do not take a replacement key or verifier from an unverified download

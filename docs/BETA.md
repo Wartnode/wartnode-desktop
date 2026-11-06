@@ -1,86 +1,97 @@
-# 0.6.0-beta.1: vanity addresses in Wallet
+# 0.6.0-beta.2: private keys in Wallet
 
-[Published prerelease](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.6.0-beta.1) · 2026-11-06T15:24:39Z
+[Published prerelease](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.6.0-beta.2) · 2026-11-06T20:47:59Z
 
-Create a Warthog vanity address from **Wallet → My addresses → Vanity address**.
-Choose **Prefix**, **Suffix**, or **Prefix + suffix**, using `0–9` and `a–f`.
-Searches run locally with CPU or OpenCL GPU support. No node connection is needed.
+## Per-address private keys
 
-The dialog shows search difficulty and can measure this computer for an estimated
-average time. Each extra character usually means 16 times more work. Estimates
-are probabilities, exclude hardware preparation, and cannot promise a finish time.
-Very long patterns show a warning when they are impractical or may have no match.
+In **Wallet → My addresses**, select an address and choose **Private key…**.
+Unlock the profile if needed, then confirm the profile password to reveal that
+address's private key. **Copy private key** copies the complete 64-character
+hexadecimal key for another Warthog wallet that accepts private-key imports.
+This works for imported, normally generated, phrase-derived and saved vanity
+addresses.
 
-Mining must be stopped for searches with **more than eight combined prefix and
-suffix characters**. Time measurement always requires mining to be stopped.
-Mining cannot start while either exclusive operation is running.
+Anyone with the key can spend funds from that address. Closing the dialog or
+locking the profile clears its display and the current matching clipboard copy.
+The matching clipboard copy also expires after 60 seconds. Clipboard history,
+sync and copies retained by other apps remain outside Wartnode's control.
 
-Closing the dialog pauses the search. Unfinished searches are saved securely in
-the profile and require **Resume search** after restarting. A match must be saved
-with **Save to wallet** before using its address. Recovery uses an encrypted
-**profile backup**, including pending searches and saved vanity addresses; vanity
-addresses do not have recovery words. Make a new backup after saving an address.
+Exporting a key leaves the address in this profile. Both wallets can control the
+same address after import. It does not recreate the original recovery words or
+export labels, contacts, payments or unfinished searches; retain encrypted
+profile backups for complete recovery. Verify the imported address matches the
+original before relying on the destination wallet.
 
-## Upgrade from 0.5.0-beta.3
+## Wallet lock correction
 
-1. In the old version, make an encrypted **Back up profile** backup and keep its
-   password. Keep this backup separately from later backups.
-2. Exit Wartnode-Desktop completely, then run the new installer against the same
-   application installation. Keep the existing wallet data folder separate from
-   the application folder.
-3. Open the existing profile. Supported shared-password profiles migrate
-   automatically. Addresses, labels, contacts and payment records are retained;
-   no wallet transfer or blockchain resync is required for this migration.
-4. Check the wallet and make a new profile backup for this version.
+RDP session disconnect now locks the wallet and clears open key, recovery and
+password dialogs through the existing session-lock path.
 
-Use the installer for this transition. Automatic update discovery remains disabled.
-The older per-address-password wallet format still requires a fresh profile and
-manual address import; this release does not add a converter for that format.
+## Upgrade and recovery
 
-## Downgrade limits
+Back up the profile in the existing app before upgrading, then exit Wartnode
+completely before running the installer. This release keeps **data contract 5,
+profile format 2 and backup format 2**, matching 0.6.0-beta.1. No database
+migration, wallet transfer or chain resync is required for a beta.1 upgrade.
+The older installer is still refused after a newer version is installed;
+compatible launcher rollback must preserve the version high-water mark.
 
-This release changes **profile format 1 to 2**, backup format 1 to 2, and the
-installation data contract from **4 to 5**. Opening an old shared-password profile
-performs the migration, even before unlocking it. Keep the pre-upgrade backup.
+Users upgrading from a 0.5.0 beta still need the
+[format-1 upgrade and downgrade guidance](https://github.com/Wartnode/wartnode-desktop/blob/v0.6.0-beta.2/docs/RELEASE_0_6_0_BETA_1.md).
+Keep the pre-upgrade backup separately: versions older than 0.6 cannot read
+format 2. Follow the existing manual-transfer guidance for older per-address
+password wallets.
 
-An older app cannot open the migrated profile or restore a new format-2 backup.
-The installer and launcher also refuse incompatible downgrade/rollback. Do not
-edit format numbers or copy an old executable over the installed application.
+## Verified release scope
 
-To return to an older beta, use its separate compatible installation and restore
-the **pre-upgrade format-1 backup into a fresh empty profile**. Keep the newer
-profile intact. That old backup cannot contain addresses, searches or payments
-created after it was made. Continue using this release or a newer compatible
-version for those records and keys. Do not use an old backup to assume a newer
-payment was never sent; reconcile its status before sending again.
+- [Trusted public CI](https://github.com/Wartnode/wartnode-desktop/actions/runs/42287350031)
+  passed all three jobs at `36fdb85b6e9d8b759a7881bdbf311f910bc1ca79`:
+  349 application tests (two existing opt-in GPU skips), 132 wallet tests,
+  native/runtime, layout, package, frozen-key, recovery, payment, proof, vanity,
+  installer and storage checks.
+- The exact CI installer, portable ZIP and matching source ZIP were
+  project-signed without rebuilding. Both signatures passed independent
+  OpenSSL verification and tamper-rejection checks; 416 tracked source files,
+  48 runtime-source hashes and 462 notice files were checked.
+- The final packaged signer exported and imported four address types with no
+  Python on its PATH. Password, ownership, context and clipboard lifecycle
+  checks passed. Source review found no reportable findings in its defined
+  scope; the RDP correction received follow-up review and a regression that
+  failed before the fix and passed after it.
+- All eight actual beta.1-to-beta.2 installer, key-transfer, backup/restore,
+  downgrade, rollback, GUI/repair and uninstall scenarios passed in a
+  disposable Windows 11 Pro build 26300 VM using synthetic offline profiles.
+  No funds or live-chain submissions were used.
+- Extended soak, physical suspend/driver-reset and additional GPU hardware
+  qualification remain deferred under the agreed beta scope. Existing
+  python-ecdsa timing risk remains; this feature adds no dependency.
 
-## Beta qualification limits
+This is a prerelease, not marked latest. Automatic update discovery remains
+disabled. The installer has project signatures in its accompanying manifests
+and remains Windows Authenticode unsigned under the existing beta policy.
 
-CPU and NVIDIA OpenCL searches have been exercised. AMD/Intel GPU coverage,
-additional hardware qualification, extended soak, and physical suspend/driver
-reset testing are deferred for this beta at the release owner's direction.
-Unsupported or unstable OpenCL configurations can use CPU mode.
-
-The installer uses project Ed25519 release/update signatures and checksums. It
-does not carry a Microsoft Authenticode publisher certificate. Verify downloads
-using the included release verification instructions. Existing beta limitations
-continue to apply; do not treat this beta as broad hardware certification.
+Download all six assets from this release and follow the
+[verification instructions](https://github.com/Wartnode/wartnode-desktop/blob/v0.6.0-beta.2/docs/RELEASE_SIGNING.md).
+For data contract 5, use a trusted 0.6 source checkout or compatible trusted
+verifier; a 0.5 verifier may reject the new contract. The pinned project key
+fingerprints are unchanged.
 
 ## Published delivery
 
-The tag identifies source `72dd0523275498dca9fd51ba72b6024f25474d25` from
-[passing CI 42228951349](https://github.com/Wartnode/wartnode-desktop/actions/runs/42228951349).
-All six release assets were downloaded anonymously, matched to the signed
-delivery and verified by the packaged verifier. The actual 0.5.0-beta.3 to
-0.6.0-beta.1 installer rehearsal passed 11 scenarios on Windows 11 Pro build 26300 with
-synthetic offline profiles. This is a prerelease, not marked latest; automatic
-discovery remains disabled. Previous releases and their assets are unchanged.
+All six anonymous downloads matched the accepted staged files and passed the
+packaged signature verifier. The release tag points to tested source
+`36fdb85b6e9d8b759a7881bdbf311f910bc1ca79`. Prior releases and assets are
+unchanged. This web documentation was updated after publication; the tested
+installer, portable and matching source archive were not rebuilt or replaced.
 
 ## Included earlier features
 
-Dashboard, Full node/Lite, mining recovery, payment reservations and message/file
-Sign / Verify remain included. [Message and file proofs](SIGNED_PROOFS.md) retain
-their documented v1-reading/v2-signing behavior and verification limits.
+Vanity addresses with Prefix, Suffix and Prefix + suffix remain on Wallet,
+including estimates, encrypted search persistence and manual resume. Mining
+must stay stopped above eight combined search characters. Dashboard,
+Full node/Lite, mining recovery, payment reservations and message/file
+Sign / Verify remain included. [Message and file proofs](SIGNED_PROOFS.md)
+retain their documented v1-reading/v2-signing behavior and verification limits.
 
 ## Existing beta limits
 
@@ -112,4 +123,4 @@ recovery words, private keys, addresses and wallet files out of public reports.
 Collected qualification data, VM files and private development history are not
 included in the public repository or matching source archive.
 
-[Previous beta notes](https://github.com/Wartnode/wartnode-desktop/blob/v0.5.0-beta.3/docs/BETA.md)
+[Previous beta notes](https://github.com/Wartnode/wartnode-desktop/blob/v0.6.0-beta.1/docs/BETA.md)

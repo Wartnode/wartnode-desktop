@@ -16,7 +16,25 @@ The earlier per-address-password wallet format (including 0.4.0-beta.1) still re
 
 Wallet → Back up profile saves a .wartprofile file encrypted with the current profile password. It includes all addresses, labels, contacts, durable payment state, pending vanity searches and found results. Make a new backup after saving a vanity address; it has no recovery words. Restore into an empty profile and unlock with the password used for that backup. Settings → Security can change the profile password; make a new backup afterwards. Older backups continue to use their original password. Machine preferences are separate; public activity is rediscovered from the selected node after restoration.
 
-In the next development build, Wallet → My addresses → select an address → **Private key…** reveals that address's private key after you unlock the profile and confirm its password. **Copy private key** copies a 64-character hexadecimal key for import into another Warthog wallet that accepts this format. Anyone with the key can spend the address's funds. The display clears when closed or when the profile locks; the current clipboard copy clears after 60 seconds or when the dialog closes, unless you have replaced it. Clipboard history and copies saved by other apps cannot be erased by Wartnode. Revealing a key does not remove the address from this profile or recover its original recovery words. Keep encrypted profile backups for the rest of your profile data. This option is not included in the published 0.6.0-beta.1 release.
+### Transfer an address
+
+In **Wallet → My addresses**, select an address and choose **Private key…**.
+Unlock the profile if needed, then confirm its password to reveal that address's
+key. **Copy private key** copies the complete 64-character hexadecimal key for
+another Warthog wallet that accepts private-key imports. Imported, normally
+generated, phrase-derived and saved vanity addresses are supported.
+
+Anyone with the key can spend the address's funds. The display clears when
+closed or when the profile locks. The current matching clipboard copy clears
+after 60 seconds or when the dialog closes; replacement clipboard content is
+preserved. Clipboard history, synchronization and copies retained by other
+apps cannot be erased by Wartnode.
+
+Revealing or copying a key leaves the address in this profile. Both wallets can
+control it after import. Verify the destination wallet shows the same address.
+The key does not reconstruct original recovery words or transfer labels,
+contacts, payments or unfinished searches; keep encrypted profile backups for
+complete profile recovery. See the [release notes](RELEASE_0_6_0_BETA_2.md).
 
 ## Vanity addresses
 
