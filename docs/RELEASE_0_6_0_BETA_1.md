@@ -1,5 +1,7 @@
 # 0.6.0-beta.1: vanity addresses in Wallet
 
+[Published prerelease](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.6.0-beta.1) · 2026-11-06T15:24:39Z
+
 Create a Warthog vanity address from **Wallet → My addresses → Vanity address**.
 Choose **Prefix**, **Suffix**, or **Prefix + suffix**, using `0–9` and `a–f`.
 Searches run locally with CPU or OpenCL GPU support. No node connection is needed.
@@ -63,3 +65,13 @@ The installer uses project Ed25519 release/update signatures and checksums. It
 does not carry a Microsoft Authenticode publisher certificate. Verify downloads
 using the included release verification instructions. Existing beta limitations
 continue to apply; do not treat this beta as broad hardware certification.
+
+## Published delivery
+
+The tag identifies source `72dd0523275498dca9fd51ba72b6024f25474d25` from
+[passing CI 42228951349](https://github.com/Wartnode/wartnode-desktop/actions/runs/42228951349).
+All six release assets were downloaded anonymously, matched to the signed
+delivery and verified by the packaged verifier. The actual 0.5.0-beta.3 to
+0.6.0-beta.1 installer rehearsal passed 11 scenarios on Windows 11 Pro build 26300 with
+synthetic offline profiles. This is a prerelease, not marked latest; automatic
+discovery remains disabled. Previous releases and their assets are unchanged.

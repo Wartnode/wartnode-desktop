@@ -6,13 +6,34 @@ Install Wartnode-Desktop per user on Windows 11 x64, starting with 21H2/build 22
 
 ## Profile and addresses
 
-Opening the app starts neither the node nor the miner. On first use, set one profile password of at least eight characters. It protects every address you create or import. Unlock once to manage addresses or send payments. Each new address has its own 24 recovery words; store these offline and check imported addresses against your original records.
+Opening the app starts neither the node nor the miner. On first use, set one profile password of at least eight characters. It protects every address you create or import. Unlock once to manage addresses or send payments. An address created with **New address** has 24 recovery words; store these offline. Vanity addresses use encrypted profile backups instead. Check imported addresses against your original records.
 
 Wallet → My addresses provides labels, a default address, copy/receive actions, and a mining payout shortcut. Wallet → Address book stores labeled recipients. Public addresses, QR codes, recorded activity, and last-known balances remain viewable while the profile is locked. Available WART combines all unique owned addresses after pending/uncertain payment reservations; an incomplete refresh never appears as a complete total.
 
-This version uses a new profile format. It leaves old-format wallet databases untouched and asks you to select a fresh folder. There is no automated wallet migration or old backup importer. Export your recovery phrases/private keys with the original application and import them manually into the fresh profile. Verify every address before receiving funds. The default launch remembers the selected fresh folder; an explicit --data-dir continues to select that folder directly.
+Before upgrading from a 0.5.0 beta, make an encrypted profile backup in that version, then exit the app. Shared-password format-1 profiles migrate automatically to format 2. Older versions cannot open the migrated profile or restore a new format-2 backup; keep the pre-upgrade backup separately. Downgrade recovery uses that old backup in a fresh compatible profile and cannot recover keys or payment records created afterwards. See the [release upgrade/downgrade instructions](RELEASE_0_6_0_BETA_1.md).
 
-Wallet → Back up profile saves a .wartprofile file encrypted with the current profile password. It includes all addresses, labels, contacts, and durable payment state. Restore into an empty profile and unlock with the password used for that backup. Settings → Security can change the profile password; make a new backup afterwards. Older backups continue to use their original password. Machine preferences are separate; public activity is rediscovered from the selected node after restoration.
+The earlier per-address-password wallet format (including 0.4.0-beta.1) still requires manual transfer. The app leaves those databases untouched and asks for a fresh folder. Export recovery phrases/private keys using the original app, import manually and verify every address. No converter for that older wallet format has been added. The default launch remembers the chosen fresh folder; an explicit --data-dir selects a folder directly.
+
+Wallet → Back up profile saves a .wartprofile file encrypted with the current profile password. It includes all addresses, labels, contacts, durable payment state, pending vanity searches and found results. Make a new backup after saving a vanity address; it has no recovery words. Restore into an empty profile and unlock with the password used for that backup. Settings → Security can change the profile password; make a new backup afterwards. Older backups continue to use their original password. Machine preferences are separate; public activity is rediscovered from the selected node after restoration.
+
+## Vanity addresses
+
+Open **Wallet → My addresses → Vanity address**. Choose **Prefix**, **Suffix** or
+**Prefix + suffix**, using `0–9` and `a–f`. Searches run locally on CPU or an
+OpenCL GPU and need no node connection. Each extra character usually means
+16 times more work. The estimate can measure your computer; times are
+probabilities, exclude hardware preparation and have no guaranteed finish time.
+Very long patterns show feasibility warnings.
+
+Stop mining for searches with **more than eight combined prefix/suffix
+characters**. Time measurement always requires mining to be stopped. Closing
+the dialog pauses and saves the search. Reopening Wartnode requires **Resume
+search**; hashing does not resume automatically.
+
+When a match is found, choose **Save to wallet** before using the address, then
+**Back up profile**. Pending searches, unsaved matches and saved addresses are
+recoverable from the encrypted profile backup. Vanity addresses have no
+recovery words. Discard permanently removes an unfinished search and unsaved match.
 
 ## Payments
 
@@ -56,6 +77,6 @@ Storage shows the actual active profile folder and opens it in the file manager.
 
 Unreadable settings offer Restore previous settings or Reset setup, preserving the original file and wallet/chain data. Reset uses the default chain folder, so retain the original storage location. Logs keep the latest 250 lines, with follow/filter/copy/export controls in separate popups.
 
-Updates preserve authenticated downloads, file verification, version/replay checks, staged explicit installation/restart, and compatible rollback. Automatic checking never installs or restarts. Channel choices appear only for actual configured signed feeds. This beta has discovery disabled and a read-only Beta channel. The new data contract prevents rollback to pre-profile versions; no incompatible wallet converter is run.
+Updates preserve authenticated downloads, file verification, version/replay checks, staged explicit installation/restart, and compatible rollback. Automatic checking never installs or restarts. Channel choices appear only for actual configured signed feeds. This beta has discovery disabled and a read-only Beta channel. Data contract 5 prevents incompatible rollback to earlier profile formats. Preserve a pre-upgrade format-1 backup if returning to a 0.5.0 beta may be necessary.
 
 Exit Wartnode-Desktop stops owned processes. About shows version/components and privacy-filtered diagnostics, excluding keys, passwords, addresses, contacts, transactions, raw logs, and personal paths. Uninstall keeps profile and chain data and removes this installation's startup registration. Reinstall a compatible version to use the profile again.

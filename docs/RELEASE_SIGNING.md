@@ -9,7 +9,7 @@ Download the installer or portable ZIP, matching source ZIP, `SHA256SUMS`,
 PowerShell can show a file's SHA-256 value:
 
 ```powershell
-Get-FileHash .\Wartnode-Desktop-0.5.0-beta.3-windows-x64-setup.exe -Algorithm SHA256
+Get-FileHash .\Wartnode-Desktop-0.6.0-beta.1-windows-x64-setup.exe -Algorithm SHA256
 ```
 
 Compare it with `SHA256SUMS`. A matching checksum detects corruption; project
@@ -33,11 +33,17 @@ With the locked Python dependencies installed in a trusted checkout:
 python scripts/verify-release.py .\downloads\release-envelope.json --directory .\downloads
 ```
 
-An already trusted installation can use:
+An already trusted installation with compatible release/data support can use:
 
 ```powershell
 WartNodeHelper.exe --verify-release .\downloads\release-envelope.json --release-directory .\downloads
 ```
+
+**0.6.0-beta.1 uses data contract 5.** A 0.5.0 verifier may refuse that new
+contract. Use a trusted 0.6 source checkout with the locked dependencies, or a
+compatible already trusted verifier. The project key fingerprints above are
+unchanged. Do not take a replacement key or verifier from an unverified download
+as its own proof of trust.
 
 Verification checks both signatures, exact installer/portable/source hashes,
 version and Windows/data compatibility, matching source and CI identities,
@@ -66,5 +72,5 @@ the repository. They are not GitHub secrets or build inputs. Preserve the
 encrypted recovery backup and its password separately. Rotation requires an
 explicit new trust decision; a download cannot replace pinned trust on its own.
 
-The first public beta leaves automatic update discovery disabled. A beta
+This beta leaves automatic update discovery disabled. A beta
 signature is a beta publication decision, not stable-release certification.

@@ -1,11 +1,11 @@
 # Wartnode-Desktop
 
-The **0.6.0-beta.1 candidate** adds vanity addresses in Wallet. See the
+The [**0.6.0-beta.1 release**](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.6.0-beta.1) adds vanity addresses in Wallet. See the
 [feature, upgrade and downgrade notes](docs/RELEASE_0_6_0_BETA_1.md).
 
 A Warthog wallet, explorer, full node and solo miner for Windows 11.
 
-[Download the beta](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.5.0-beta.3) · [Screenshots](docs/SCREENSHOTS.md) · [User guide](docs/MVP_GUIDE.md) · [Build from source](docs/BUILD.md) · [Report an issue](https://github.com/Wartnode/wartnode-desktop/issues/new/choose)
+[Download the beta](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.6.0-beta.1) · [Screenshots](docs/SCREENSHOTS.md) · [User guide](docs/MVP_GUIDE.md) · [Build from source](docs/BUILD.md) · [Report an issue](https://github.com/Wartnode/wartnode-desktop/issues/new/choose)
 
 Wartnode-Desktop supports two connection modes. **Lite wallet** connects to
 `mainnet.wartnode.com` without downloading the blockchain. **Full node** stores
@@ -31,9 +31,9 @@ Download files from this repository's [Releases page](https://github.com/Wartnod
 
 | Download | Use |
 | --- | --- |
-| `Wartnode-Desktop-0.5.0-beta.3-windows-x64-setup.exe` | Per-user installation with a Start menu shortcut. |
-| `Wartnode-Desktop-0.5.0-beta.3-windows-x64.zip` | Portable application; extract the complete folder and run `WartNode.exe`. |
-| `Wartnode-Desktop-0.5.0-beta.3-source.zip` | Matching application source, locked upstream inputs and build recipes. |
+| `Wartnode-Desktop-0.6.0-beta.1-windows-x64-setup.exe` | Per-user installation with a Start menu shortcut. |
+| `Wartnode-Desktop-0.6.0-beta.1-windows-x64.zip` | Portable application; extract the complete folder and run `WartNode.exe`. |
+| `Wartnode-Desktop-0.6.0-beta.1-source.zip` | Matching application source, locked upstream inputs and build recipes. |
 | `SHA256SUMS` and signed manifests | Download integrity and project-signature verification. |
 
 1. Download the installer and review the [verification instructions](docs/RELEASE_SIGNING.md).
@@ -88,7 +88,8 @@ and profile activity. Difficulty uses GH/TH; its exact value is available in a t
 Node provides Full/Lite selection, chain/resource statistics and a separate log window.
 
 - **One profile password:** set it on first use, then unlock once to create/import
-  multiple addresses or send. Each new address has its own recovery words.
+  multiple addresses or send. **New address** provides recovery words; vanity
+  addresses use encrypted profile backups.
 - **Organize:** label owned addresses, choose a default or mining payout, and keep
   saved recipients in **Wallet → Address book**.
 - **Receive:** select an address to copy it or display its QR code. Public address
@@ -104,14 +105,25 @@ Node provides Full/Lite selection, chain/resource statistics and a separate log 
   against an independently expected address. Works locally in Full node and Lite,
   including verification while locked. See the [format and guide](docs/SIGNED_PROOFS.md).
   [View signing and verification screenshots](docs/SCREENSHOTS.md#sign-and-verify).
+- **Vanity address:** choose Prefix, Suffix or Prefix + suffix in Wallet. View
+  difficulty and local time estimates; pause and resume saved searches. Mining
+  must stay stopped above eight combined characters. See the [guide](docs/MVP_GUIDE.md#vanity-addresses).
 - **Back up profile:** an encrypted .wartprofile backup covers every address,
-  label, contact and durable payment record. Restore into an empty profile.
+  label, contact, durable payment record and pending/found vanity search. Restore
+  into an empty profile. Vanity addresses have no recovery words.
 
-### Upgrading from 0.5.0-beta.1 or 0.5.0-beta.2
+### Upgrading from 0.5.0 betas
 
-Exit the application before running the new installer. This release keeps the same
-profile/data format; no fresh profile, wallet transfer or blockchain resync is
-required. Preserve your normal encrypted profile backup.
+**Make an encrypted profile backup in the old version before upgrading and keep
+it separately.** Exit the application completely, then run the new installer.
+Shared-password profiles migrate automatically from format 1 to 2; addresses,
+labels, contacts and payment records are retained. No wallet transfer or chain
+resync is required. Make a new backup after upgrading.
+
+Older versions cannot open the migrated profile or restore new format-2 backups.
+Downgrade recovery requires the pre-upgrade backup and a fresh compatible
+profile; keep the newer profile and any keys/payments created since that backup.
+See the [upgrade and downgrade instructions](docs/RELEASE_0_6_0_BETA_1.md).
 
 ### Upgrading from 0.4.0-beta.1
 

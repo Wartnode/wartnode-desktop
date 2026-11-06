@@ -1,62 +1,88 @@
-# 0.5.0-beta.3: message and file signing
+# 0.6.0-beta.1: vanity addresses in Wallet
 
-**Wallet → My addresses → Sign / Verify** can now prove control of a Warthog
-address by signing a message or file fingerprint. It works locally in Full node
-and Lite modes. File contents are read locally and are never uploaded.
+[Published prerelease](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.6.0-beta.1) · 2026-11-06T15:24:39Z
 
-- Select an owned address and review the exact message or filename, byte length
-  and SHA-256 before approving. Signing requires an unlocked profile.
-- Copy the public proof or save a `.wartproof` document. For files, share the
-  original file separately.
-- Verify pasted or saved proofs against an independently obtained expected
-  address. Verification works with the profile locked and no running node.
-- Editing inputs clears previous results. Cancelling or locking during review
-  prevents that approval from being used. Reviews expire after two minutes.
+Create a Warthog vanity address from **Wallet → My addresses → Vanity address**.
+Choose **Prefix**, **Suffix**, or **Prefix + suffix**, using `0–9` and `a–f`.
+Searches run locally with CPU or OpenCL GPU support. No node connection is needed.
 
-New proofs use the pinned Warthog Python SDK and native libsecp256k1 through
-coincurve. The v2 format carries a 65-byte recoverable signature. Earlier v1
-prototype proofs remain readable; new signing always produces v2. The complete
-[format, examples and verifier instructions](SIGNED_PROOFS.md) are public.
-This is a WartNode application format, not a Warthog consensus or cross-wallet
-standard. It creates no transaction, fee or on-chain address-name record.
+The dialog shows search difficulty and can measure this computer for an estimated
+average time. Each extra character usually means 16 times more work. Estimates
+are probabilities, exclude hardware preparation, and cannot promise a finish time.
+Very long patterns show a warning when they are impractical or may have no match.
 
-Messages are limited to 16,384 UTF-8 bytes; files to 16 GiB. A valid signature
-proves access to the private key for that signed content, without establishing
-legal identity, current or exclusive custody, trusted time, or file safety.
-Wallet-claim services must issue and consume their own fresh challenges.
+Mining must be stopped for searches with **more than eight combined prefix and
+suffix characters**. Time measurement always requires mining to be stopped.
+Mining cannot start while either exclusive operation is running.
 
-## Upgrade and recovery
+Closing the dialog pauses the search. Unfinished searches are saved securely in
+the profile and require **Resume search** after restarting. A match must be saved
+with **Save to wallet** before using its address. Recovery uses an encrypted
+**profile backup**, including pending searches and saved vanity addresses; vanity
+addresses do not have recovery words. Make a new backup after saving an address.
 
-Exit Wartnode-Desktop before installing. Upgrades from 0.5.0-beta.1 or beta.2
-retain data contract 4 and profile format 1: no fresh profile, wallet transfer,
-chain migration or resync is required. Preserve your encrypted profile backup.
-The earlier 0.4.0-beta.1 manual fresh-profile transfer remains necessary.
+## Upgrade from 0.5.0-beta.3
 
-Existing Dashboard, mining recovery, payment reservation and backup behavior
-remain included. Automatic update discovery stays disabled; use the installer
-from this repository's Releases page.
+1. In the old version, make an encrypted **Back up profile** backup and keep its
+   password. Keep this backup separately from later backups.
+2. Exit Wartnode-Desktop completely, then run the new installer against the same
+   application installation. Keep the existing wallet data folder separate from
+   the application folder.
+3. Open the existing profile. Supported shared-password profiles migrate
+   automatically. Addresses, labels, contacts and payment records are retained;
+   no wallet transfer or blockchain resync is required for this migration.
+4. Check the wallet and make a new profile backup for this version.
 
-## Verification and beta scope
+Use the installer for this transition. Automatic update discovery remains disabled.
+The older per-address-password wallet format still requires a fresh profile and
+manual address import; this release does not add a converter for that format.
 
-Download the matching source archive, both project-signed manifests and
-`SHA256SUMS` with the installer or portable ZIP. Follow
-[release verification](RELEASE_SIGNING.md). Project signatures do not establish
-Windows Authenticode publisher trust; the installer remains Authenticode unsigned.
+## Downgrade limits
 
-The signing integration received a focused source review and 22 manual packaged
-UI checks covering Full node/Lite, message/file signing, cancellation, locked
-verification and invalid inputs. That review is not a full native cryptographic
-or side-channel audit. Physical Windows session lock and maximum-size file reads
-were not manually exercised; automated tests cover lock-during-review and
-cancelled hashing.
+This release changes **profile format 1 to 2**, backup format 1 to 2, and the
+installation data contract from **4 to 5**. Opening an old shared-password profile
+performs the migration, even before unlocking it. Keep the pre-upgrade backup.
 
-Broader hardware/driver, Windows/accessibility and integrated soak qualification
-remain existing beta deferrals. Public CI and signed manifests identify this
-release's exact source and files; historical qualification is not relabeled as
-fresh physical hardware or clean Windows certification.
+An older app cannot open the migrated profile or restore a new format-2 backup.
+The installer and launcher also refuse incompatible downgrade/rollback. Do not
+edit format numbers or copy an old executable over the installed application.
+
+To return to an older beta, use its separate compatible installation and restore
+the **pre-upgrade format-1 backup into a fresh empty profile**. Keep the newer
+profile intact. That old backup cannot contain addresses, searches or payments
+created after it was made. Continue using this release or a newer compatible
+version for those records and keys. Do not use an old backup to assume a newer
+payment was never sent; reconcile its status before sending again.
+
+## Beta qualification limits
+
+CPU and NVIDIA OpenCL searches have been exercised. AMD/Intel GPU coverage,
+additional hardware qualification, extended soak, and physical suspend/driver
+reset testing are deferred for this beta at the release owner's direction.
+Unsupported or unstable OpenCL configurations can use CPU mode.
+
+The installer uses project Ed25519 release/update signatures and checksums. It
+does not carry a Microsoft Authenticode publisher certificate. Verify downloads
+using the included release verification instructions. Existing beta limitations
+continue to apply; do not treat this beta as broad hardware certification.
+
+## Published delivery
+
+The tag identifies source `72dd0523275498dca9fd51ba72b6024f25474d25` from
+[passing CI 42228951349](https://github.com/Wartnode/wartnode-desktop/actions/runs/42228951349).
+All six release assets were downloaded anonymously, matched to the signed
+delivery and verified by the packaged verifier. The actual 0.5.0-beta.3 to
+0.6.0-beta.1 installer rehearsal passed 11 scenarios on Windows 11 Pro build 26300 with
+synthetic offline profiles. This is a prerelease, not marked latest; automatic
+discovery remains disabled. Previous releases and their assets are unchanged.
+
+## Included earlier features
+
+Dashboard, Full node/Lite, mining recovery, payment reservations and message/file
+Sign / Verify remain included. [Message and file proofs](SIGNED_PROOFS.md) retain
+their documented v1-reading/v2-signing behavior and verification limits.
 
 ## Existing beta limits
-
 
 - Windows 10, Windows Server, ARM and 32-bit Windows are outside the target.
   Earlier Windows 11 feature releases have not all been executed individually.
@@ -78,9 +104,7 @@ fresh physical hardware or clean Windows certification.
   Imported chain files require a trusted source; structural checks do not replay
   every historical block.
 
-
 ## Reporting a problem
-
 
 Include the app version, Windows build, connection mode, reproduction steps and
 redacted diagnostics. For mining, include CPU/GPU/driver versions. Keep passwords,
@@ -88,5 +112,4 @@ recovery words, private keys, addresses and wallet files out of public reports.
 Collected qualification data, VM files and private development history are not
 included in the public repository or matching source archive.
 
-
-[Previous beta notes](https://github.com/Wartnode/wartnode-desktop/blob/v0.5.0-beta.2/docs/BETA.md)
+[Previous beta notes](https://github.com/Wartnode/wartnode-desktop/blob/v0.5.0-beta.3/docs/BETA.md)
