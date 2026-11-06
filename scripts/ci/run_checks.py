@@ -51,6 +51,8 @@ if __name__ == '__main__':
                                                   '--package-dir', extracted['directory']])
     results['frozen-vanity'] = run('frozen-vanity', [sys.executable, 'scripts/test-frozen-vanity.py',
                                                   '--package-dir', extracted['directory']])
+    results['frozen-key-export'] = run('frozen-key-export', [sys.executable, 'scripts/test-frozen-key-export.py',
+                                                          '--package-dir', extracted['directory']])
     results['installer'] = run('installer', [powershell, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
                                            'scripts/build-installer.ps1', '-PythonExecutable', sys.executable])
     results['upgrade-fixture'] = run('upgrade-fixture', [sys.executable, 'scripts/build-upgrade-fixture.py'])

@@ -63,5 +63,24 @@ class ProfileClientTests(unittest.TestCase):
                 self.assertEqual(row['state'],'paused')
                 self.client.call('unlock',password='synthetic-client-password')
 
+    def test_lock_during_private_key_export_scrubs_response_and_relocks_helper(self):
+        self.client.call('unlock', password='synthetic-client-password')
+        address = self.client.call('import', kind='private', secret=f'{1:064x}')['address']
+        valid = [True]
+        responses = []
+        exchange = self.client._exchange
+        def invalidated(action, args):
+            result = exchange(action, args)
+            if action == 'export_private_key':
+                responses.append(result)
+                valid[0] = False
+            return result
+        with patch.object(self.client, '_exchange', side_effect=invalidated):
+            result = self.client.call('export_private_key', _valid=lambda: valid[0],
+                                     address=address, password='synthetic-client-password')
+        self.assertIsNone(result)
+        self.assertEqual(responses, [{}])
+        self.assertTrue(self.client.call('list')['locked'])
+
 
 if __name__=='__main__':unittest.main()

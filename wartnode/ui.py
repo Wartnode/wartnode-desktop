@@ -319,6 +319,8 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
         def done(result, error):
             self.tasks.discard(task)
             if self.exiting or (self.closing and not during_shutdown):
+                if isinstance(result, dict) and 'private_key' in result:
+                    result.clear()
                 return
             if error:
                 if self.signer.process.poll() is not None and self.profile_unlocked:

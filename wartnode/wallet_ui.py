@@ -9,6 +9,49 @@ from . import settings
 
 
 class WalletActions:
+    def reveal_selected_private_key(self):
+        address = self.selected_public_address()
+        if address:
+            self.reveal_private_key(address)
+
+    def reveal_private_key(self, address):
+        if not self.profile_unlocked:
+            self.ensure_profile(lambda: self.reveal_private_key(address))
+            return
+        generation = self.session_generation
+        password = self.password('Reveal private key',
+            f'Profile password for {address}\n\nAnyone with this key can spend funds from this address.')
+        if password is None or generation != self.session_generation:
+            return
+
+        def revealed(result, error):
+            if not result:
+                return
+            try:
+                if generation != self.session_generation or not self.profile_unlocked:
+                    return
+                from .key_ui import PrivateKeyDialog
+                dialog = PrivateKeyDialog(self, result['address'], result['private_key'])
+                result.clear()
+                self.secret_dialogs[dialog] = dialog.clear_secret
+                try:
+                    dialog.exec()
+                finally:
+                    dialog.clear_secret()
+                    self.secret_dialogs.pop(dialog, None)
+                    dialog.deleteLater()
+            finally:
+                result.clear()
+
+        request = {'address': address, 'password': password}
+        del password
+        def export():
+            try:
+                return self.guard_signer(generation, 'export_private_key', **request)
+            finally:
+                request.clear()
+        self.submit(export, revealed)
+
     def show_vanity(self):
         if not hasattr(self, 'vanity_dialog'):
             from .vanity_ui import VanityDialog

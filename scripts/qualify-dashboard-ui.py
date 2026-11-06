@@ -40,6 +40,7 @@ from wartnode.signer import Signer
 from wartnode.ui import Window,SetupDialog
 from wartnode import __version__
 from wartnode.vanity_ui import VanityDialog,WrappedText
+from wartnode.key_ui import PrivateKeyDialog
 
 app=QApplication([])
 def drain():
@@ -69,11 +70,18 @@ with tempfile.TemporaryDirectory(prefix='dashboard-layout-',dir=ROOT/'work') as 
         window.runtime.vanity.measurements.put('auto','both',
             dict(rate=1_000_000,low=500_000,high=1_500_000,samples=6,seconds=6,variable=True),
             dict(synthetic_layout_fixture=True),['cpu:0'],None)
-        dialogs=[window.send_dialog,window.receive_dialog,window.mining_settings_dialog,SetupDialog(directory,{},window),vanity]
+        key=PrivateKeyDialog(window,window.wallets[0]['address'],f'{1:064x}')
+        dialogs=[window.send_dialog,window.receive_dialog,window.mining_settings_dialog,SetupDialog(directory,{},window),vanity,key]
         for dialog in dialogs:
             dialog.show();drain()
             assert dialog.height()+32<=height,(dialog.windowTitle(),'too tall',dialog.height(),height)
             assert dialog.width()+16<=width,(dialog.windowTitle(),'too wide')
+            if dialog is key:
+                assert key.key.isReadOnly() and key.copy_button.isVisible()
+                assert dialog.grab().save(str(output/'private-key.png'))
+                key.reject()
+                assert key.key.text()==''
+                continue
             scroll=dialog.findChild(QScrollArea)
             assert scroll is not None
             if dialog is vanity:
@@ -103,4 +111,4 @@ with tempfile.TemporaryDirectory(prefix='dashboard-layout-',dir=ROOT/'work') as 
     window.signer.close();window.pool.waitForDone(30000);window.lifecycle_pool.waitForDone(30000)
     window.tray.hide();window.close();drain()
 print(json.dumps({'application':__version__,'scale':options.scale,'logical_desktop':[width,height],
-                  'pages':6,'dialogs':5,'all_passed':True,'directory':str(output.relative_to(ROOT))}))
+                  'pages':6,'dialogs':6,'all_passed':True,'directory':str(output.relative_to(ROOT))}))

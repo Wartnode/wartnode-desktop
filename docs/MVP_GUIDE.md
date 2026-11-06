@@ -16,6 +16,8 @@ The earlier per-address-password wallet format (including 0.4.0-beta.1) still re
 
 Wallet → Back up profile saves a .wartprofile file encrypted with the current profile password. It includes all addresses, labels, contacts, durable payment state, pending vanity searches and found results. Make a new backup after saving a vanity address; it has no recovery words. Restore into an empty profile and unlock with the password used for that backup. Settings → Security can change the profile password; make a new backup afterwards. Older backups continue to use their original password. Machine preferences are separate; public activity is rediscovered from the selected node after restoration.
 
+In the next development build, Wallet → My addresses → select an address → **Private key…** reveals that address's private key after you unlock the profile and confirm its password. **Copy private key** copies a 64-character hexadecimal key for import into another Warthog wallet that accepts this format. Anyone with the key can spend the address's funds. The display clears when closed or when the profile locks; the current clipboard copy clears after 60 seconds or when the dialog closes, unless you have replaced it. Clipboard history and copies saved by other apps cannot be erased by Wartnode. Revealing a key does not remove the address from this profile or recover its original recovery words. Keep encrypted profile backups for the rest of your profile data. This option is not included in the published 0.6.0-beta.1 release.
+
 ## Vanity addresses
 
 Open **Wallet → My addresses → Vanity address**. Choose **Prefix**, **Suffix** or

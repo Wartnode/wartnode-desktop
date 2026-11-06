@@ -3,6 +3,8 @@
 The [**0.6.0-beta.1 release**](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.6.0-beta.1) adds vanity addresses in Wallet. See the
 [feature, upgrade and downgrade notes](docs/RELEASE_0_6_0_BETA_1.md).
 
+The unpublished [0.6.0-beta.2 candidate](docs/RELEASE_0_6_0_BETA_2.md) adds password-confirmed private-key reveal and copy for individual wallet addresses. Current public downloads remain 0.6.0-beta.1.
+
 A Warthog wallet, explorer, full node and solo miner for Windows 11.
 
 [Download the beta](https://github.com/Wartnode/wartnode-desktop/releases/tag/v0.6.0-beta.1) · [Screenshots](docs/SCREENSHOTS.md) · [User guide](docs/MVP_GUIDE.md) · [Build from source](docs/BUILD.md) · [Report an issue](https://github.com/Wartnode/wartnode-desktop/issues/new/choose)

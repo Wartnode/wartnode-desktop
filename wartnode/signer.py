@@ -118,7 +118,7 @@ class Signer:
             self.review = self.proof_review = None
             return result
         if action in ('select', 'touch', 'edit_address', 'save_contact', 'delete_contact',
-                      'change_password', 'create', 'import', 'backup') and self.profile_key is None:
+                      'change_password', 'create', 'import', 'backup', 'export_private_key') and self.profile_key is None:
             raise ValueError('Unlock your profile first')
         if action == 'select':
             address = crypto.validate_address(args['address'])
@@ -163,6 +163,20 @@ class Signer:
             self.review = None
             self.proof_review = None
             return {"address": address, "phrase": phrase}
+        if action == 'export_private_key':
+            key = self.store.unlock(args['password'])
+            try:
+                if key != self.profile_key:
+                    self.lock()
+                    raise ValueError('The profile changed. Unlock it again')
+                owner, private = self.store.private_key(key, args['address'])
+                try:
+                    self.require_context(binding)
+                    return {'address': owner, 'private_key': private.to_string().hex()}
+                finally:
+                    del private
+            finally:
+                del key
         if action == "backup":
             key = self.store.unlock(args['password'])
             if key != self.profile_key:
@@ -351,6 +365,7 @@ def serve(directory):
     signer = Signer(directory)
     for line in sys.stdin.buffer:
         response = {"id": None}
+        request = None
         try:
             if len(line) > 1024 * 1024:
                 raise ValueError("Request exceeds limit")
@@ -362,5 +377,9 @@ def serve(directory):
             response["error"] = str(exc)[:300] if isinstance(exc, ValueError) else "Wallet operation failed"
         sys.stdout.write(json.dumps(response) + "\n")
         sys.stdout.flush()
+        # Do not retain the last exported key or password while the pipe is idle.
+        response.clear()
+        request = None
+        del line
     signer.lock()
     signer.store.con.close()

@@ -107,7 +107,8 @@ def build_wallet(self):
     body.addWidget(self.address_table)
     actions=QHBoxLayout()
     for title,callback in [('Copy',self.copy_selected_address),('Receive',self.show_receive),
-        ('Label',self.label_selected_address),('Set default',self.default_selected_address),('Mine to address',self.mine_selected_address)]:
+        ('Label',self.label_selected_address),('Set default',self.default_selected_address),
+        ('Mine to address',self.mine_selected_address),('Private key…',self.reveal_selected_private_key)]:
         actions.addWidget(button(title,callback))
     actions.addStretch();body.addLayout(actions)
     paging=QHBoxLayout()

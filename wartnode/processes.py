@@ -607,6 +607,8 @@ class SignerClient:
             if _valid is not None and not _valid():return None
             result=self._exchange(action,args)
             if _valid is not None and not _valid():
+                if action == 'export_private_key' and isinstance(result, dict):
+                    result.clear()
                 # Keep the transport lock until the helper has discarded the
                 # stale authorization. A later unlock cannot overtake this lock.
                 try:
