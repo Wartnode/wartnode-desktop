@@ -90,7 +90,7 @@ def main():
     manifest['application'] = __version__
     manifest['components']['vanity'] = entry
     manifest_path.write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
-    (ROOT/'vendor/sources/vanity-build.json').write_text(json.dumps(entry, indent=2)+'\n', encoding='utf-8')
+    (ROOT/'provenance/vanity-build.json').write_text(json.dumps(entry, indent=2)+'\n', encoding='utf-8')
     shutil.copy2(source/'LICENSE', ROOT/'notices/Vanity-Pro-MIT.txt')
     notices = ROOT/'notices/vanity-pro'
     shutil.copytree(source/'licenses', notices, dirs_exist_ok=True)

@@ -66,7 +66,8 @@ See [build instructions](BUILD.md), the [GPL](../LICENSE) and
 The matching source includes pinned MIT-licensed Vanity Pro source at
 `vendor/sources/vanity-pro.tar.gz`, the public pipe adapter and exact Cargo lock
 under `native/vanity-worker`, and `scripts/build-vanity.py`. The source identity
-and worker build receipt are retained in `vendor/sources/vanity-build.json`.
+and current worker digest are recorded in the packaged component manifest and
+the matching source ZIP's `components/manifest.json`.
 Upstream notices are in `notices/Vanity-Pro-MIT.txt` and `notices/vanity-pro`.
 The build generates `notices/vanity-worker-dependencies/inventory.json` and
 retains upstream license/attribution files for the resolved Windows Cargo graph.
