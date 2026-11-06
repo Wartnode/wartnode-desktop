@@ -301,8 +301,8 @@ class Window(WalletActions,MiningActions,ExplorerActions,PreferencesActions,Acti
             msg = wintypes.MSG.from_address(int(message))
             if msg.message in (0x001A,0x031A):
                 QTimer.singleShot(0,lambda:theme.apply(QApplication.instance(),self.preferences['appearance']))
-            if msg.message == 0x02B1 and msg.wParam in (2, 6, 7):
-                # Remote disconnect, logoff and session lock invalidate signing context.
+            if msg.message == 0x02B1 and msg.wParam in (2, 4, 6, 7):
+                # Console/RDP disconnect, logoff and lock invalidate signing context.
                 self.lock_wallet()
             if msg.message == 0x0218 and msg.wParam == 4:
                 # Windows suspend preserves the checkpoint; waking never resumes hashing.

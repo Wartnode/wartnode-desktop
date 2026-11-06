@@ -267,6 +267,36 @@ class PrivateKeyWalletTests(unittest.TestCase):
             self.window.reveal_selected_private_key()
         self.assertFalse(self.window.secret_dialogs)
 
+    def test_rdp_disconnect_clears_open_private_key_and_locks_profile(self):
+        import ctypes
+        import os
+        from ctypes import wintypes
+        if os.name != 'nt':
+            self.skipTest('Windows native session notification')
+        self.configure()
+        observed = {}
+        timer = QTimer()
+        def disconnect():
+            for dialog in list(self.window.secret_dialogs):
+                if isinstance(dialog, PrivateKeyDialog):
+                    dialog.copy_key()
+                    message = wintypes.MSG()
+                    message.message, message.wParam = 0x02B1, 4  # WTS_REMOTE_DISCONNECT
+                    self.window.nativeEvent(b'windows_generic_MSG', ctypes.addressof(message))
+                    observed.update(cleared=dialog.key.text() == '', locked=not self.window.profile_unlocked,
+                                    hidden=not dialog.isVisible(), clipboard_cleared=QApplication.clipboard().text() == '')
+                    timer.stop()
+                    dialog.reject()  # A failing regression must still close its modal fixture.
+        timer.timeout.connect(disconnect)
+        timer.start(20)
+        try:
+            with patch.object(self.window, 'password', return_value=PASSWORD):
+                self.window.reveal_selected_private_key()
+                until(lambda: bool(observed) and not self.window.tasks)
+            self.assertEqual(observed, dict(cleared=True, locked=True, hidden=True, clipboard_cleared=True))
+        finally:
+            timer.stop()
+
 
 if __name__ == '__main__':
     unittest.main()
